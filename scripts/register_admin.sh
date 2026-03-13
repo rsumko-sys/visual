@@ -5,6 +5,6 @@ API_URL="${API_URL:-https://robust-kindness-production.up.railway.app}"
 
 curl -s -X POST "$API_URL/auth/register" \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","email":"admin@example.com","password":"'${ADMIN_PASSWORD:-Admin123!}'"}'
+  -d '{"username":"admin","email":"admin@example.com","password":"'${ADMIN_PASSWORD:-1488}'"}'
 
 echo ""
