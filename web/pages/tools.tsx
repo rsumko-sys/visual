@@ -310,10 +310,11 @@ export default function ToolsPage() {
           )}
           {loadError && (
             <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-              <Button variant="contained" color="primary" onClick={() => fetchTools()}>
+              <Button type="button" variant="contained" color="primary" onClick={() => fetchTools()}>
                 Повторити
               </Button>
               <Button
+                type="button"
                 variant="outlined"
                 size="small"
                 onClick={() => {
@@ -451,9 +452,10 @@ export default function ToolsPage() {
                       '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
                     }}
                   />
-                  <Button 
-                    size="small" 
-                    variant="contained" 
+                  <Button
+                    type="button"
+                    size="small"
+                    variant="contained"
                     onClick={handleSaveKey}
                     sx={{ mt: 1 }}
                   >
@@ -503,6 +505,7 @@ export default function ToolsPage() {
             </DialogContent>
             <DialogActions sx={{ p: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
               <Button 
+                type="button"
                 startIcon={<LaunchIcon />}
                 sx={{ color: 'rgba(255,255,255,0.6)' }}
                 onClick={() => window.open(`https://www.google.com/search?q=${selectedTool.name}+osint`, '_blank')}
@@ -510,8 +513,9 @@ export default function ToolsPage() {
                 Open Website
               </Button>
               <Box sx={{ flexGrow: 1 }} />
-              <Button onClick={() => setSelectedTool(null)} sx={{ color: 'rgba(255,255,255,0.5)' }}>Cancel</Button>
+              <Button type="button" onClick={() => setSelectedTool(null)} sx={{ color: 'rgba(255,255,255,0.5)' }}>Cancel</Button>
               <Button 
+                type="button"
                 variant="contained" 
                 color="primary"
                 startIcon={<PlayIcon />}

@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Box, Typography, TextField, Button, Paper, Switch, FormControlLabel, Snackbar, Alert, Chip, Divider } from '@mui/material';
 import { Link as LinkIcon, VpnKey as KeyIcon } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import { getApiBaseUrl } from '../lib/api';
 import api, { getApiBaseUrl } from '../lib/api';
 
 const PRODUCTION_API = 'https://robust-kindness-production.up.railway.app';
@@ -28,6 +27,8 @@ export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('http://localhost:8000');
   const [storeApiKeysLocally, setStoreApiKeysLocally] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [guestLoading, setGuestLoading] = useState(false);
+  const [guestError, setGuestError] = useState<string | null>(null);
   const [isProduction, setIsProduction] = useState(false);
   const { token, login, logout } = useAuth();
 
@@ -57,11 +58,18 @@ export default function SettingsPage() {
   };
 
   const handleGuestToken = async () => {
+    setGuestError(null);
+    setGuestLoading(true);
     try {
       const res = await api.get<{ access_token: string }>('/auth/guest');
-      if (res.data?.access_token) login(res.data.access_token);
-    } catch {
-      /* ignore */
+      if (res.data?.access_token) {
+        login(res.data.access_token);
+        setSaved(true);
+      }
+    } catch (e) {
+      setGuestError('Не вдалося підключитися до API. Перевірте URL в налаштуваннях.');
+    } finally {
+      setGuestLoading(false);
     }
   };
 
@@ -104,6 +112,7 @@ export default function SettingsPage() {
             />
             {isProduction && (
               <Button
+                type="button"
                 variant="outlined"
                 size="small"
                 sx={{ mb: 2, display: 'block', borderColor: 'rgba(0,212,170,0.4)', color: 'primary.main' }}
@@ -153,7 +162,7 @@ export default function SettingsPage() {
                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, display: 'block' }}>
                   Beta: JWT (guest) збережено
                 </Typography>
-                <Button variant="outlined" size="small" sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={logout}>
+                <Button type="button" variant="outlined" size="small" sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={logout}>
                   Вийти
                 </Button>
               </Box>
@@ -162,8 +171,13 @@ export default function SettingsPage() {
                 <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>
                   Beta: доступ без пароля
                 </Typography>
-                <Button variant="contained" color="primary" size="medium" onClick={handleGuestToken}>
-                  Отримати доступ
+                {guestError && (
+                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setGuestError(null)}>
+                    {guestError}
+                  </Alert>
+                )}
+                <Button type="button" variant="contained" color="primary" size="medium" onClick={handleGuestToken} disabled={guestLoading}>
+                  {guestLoading ? 'Завантаження...' : 'Отримати доступ'}
                 </Button>
               </Box>
             )}

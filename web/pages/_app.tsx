@@ -48,6 +48,9 @@ const theme = createTheme({
       defaultProps: { elevation: 0 },
     },
     MuiButton: {
+      defaultProps: {
+        type: 'button',
+      },
       styleOverrides: {
         root: {
           minHeight: 44,

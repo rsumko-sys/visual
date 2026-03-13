@@ -18,6 +18,7 @@ export default function HomePage() {
         </Typography>
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
           <Button 
+            type="button"
             variant="contained" 
             color="primary" 
             size="large" 
@@ -27,6 +28,7 @@ export default function HomePage() {
             Каталог інструментів
           </Button>
           <Button 
+            type="button"
             variant="outlined" 
             sx={{ px: 4, py: 1.5, minHeight: 48, borderColor: 'rgba(255,255,255,0.4)', color: 'text.primary' }}
             onClick={() => router.push('/investigation')}
