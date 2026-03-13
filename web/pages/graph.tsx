@@ -1,8 +1,8 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import { 
   Box, Typography, Paper, Grid, Card, CardContent, 
-  IconButton, Tooltip, TextField, Button, Chip,
+  IconButton, Tooltip, TextField, Button, Chip, InputAdornment,
   List, ListItem, ListItemText, ListItemIcon, Divider,
   Slider, FormControlLabel, Switch, Avatar, Snackbar, Alert
 } from '@mui/material';
@@ -103,6 +103,11 @@ export default function VisualGraphPage() {
     }
   };
 
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (cy) cy.zoom(graphZoom);
+  }, [graphZoom]);
+
   return (
     <Layout>
       <Box sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -132,7 +137,11 @@ export default function VisualGraphPage() {
               value={searchQuery}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               InputProps={{
-                startAdornment: <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)', mr: 1, fontSize: 20 }} />,
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
+                  </InputAdornment>
+                ),
               }}
               sx={{ 
                 mb: 3,
@@ -182,11 +191,11 @@ export default function VisualGraphPage() {
           <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Selected Entity</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
-              <Avatar sx={{ width: 64, height: 64, bgcolor: 'primary.main', mb: 2 }}>
-                <PersonIcon sx={{ fontSize: 32 }} />
+              <Avatar sx={{ width: 64, height: 64, bgcolor: nodeTypeColors[selectedNode?.data?.type] || 'primary.main', mb: 2 }}>
+                {nodeTypeIcons[selectedNode?.data?.type] || <PersonIcon sx={{ fontSize: 32 }} />}
               </Avatar>
-              <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>target_user_01</Typography>
-              <Chip label="PERSON" size="small" sx={{ mt: 1, bgcolor: 'rgba(33, 150, 243, 0.1)', color: 'primary.main', fontWeight: 600 }} />
+              <Typography variant="subtitle1" sx={{ color: '#fff', fontWeight: 600 }}>{selectedNode?.data?.label || '—'}</Typography>
+              <Chip label={(selectedNode?.data?.type || 'unknown').toUpperCase()} size="small" sx={{ mt: 1, bgcolor: 'rgba(33, 150, 243, 0.1)', color: 'primary.main', fontWeight: 600 }} />
             </Box>
             <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.05)' }} />
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>

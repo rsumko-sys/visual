@@ -328,7 +328,7 @@ export default function InvestigationHub() {
                           </Typography>
                           <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
                             <Button size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { navigator.clipboard?.writeText(res.data); setCopyStatus('Скопійовано'); setTimeout(() => setCopyStatus(null), 2000); }}>Raw JSON</Button>
-                            <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000)}>AI Analysis</Button>
+                            <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000); }}>AI Analysis</Button>
                             {copyStatus && <Typography variant="caption" sx={{ color: 'success.main', alignSelf: 'center', ml: 1 }}>{copyStatus}</Typography>}
                           </Box>
                         </CardContent>

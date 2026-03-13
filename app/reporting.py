@@ -9,6 +9,13 @@ from typing import List, Dict, Any, Optional
 import json
 import hashlib
 
+
+def _pdf_safe(text: str) -> str:
+    """Sanitize text for PDF (Helvetica supports only Latin-1)"""
+    if not text:
+        return ""
+    return "".join(c if ord(c) < 128 else "?" for c in str(text))
+
 class ReportFormat(str, Enum):
     """Формати експорту звітів"""
     HTML = "html"
@@ -135,14 +142,15 @@ class ReportGenerator:
         for section in self.report_data["sections"]:
             pdf.set_font('helvetica', 'B', 14)
             pdf.set_fill_color(230, 230, 230)
-            pdf.cell(0, 10, section["title"], ln=True, fill=True)
+            pdf.cell(0, 10, _pdf_safe(section["title"]), ln=True, fill=True)
             pdf.ln(5)
             
             pdf.set_font('helvetica', '', 11)
             if section["type"] == ReportSectionType.EXECUTIVE_SUMMARY.value:
-                pdf.multi_cell(0, 10, f"Target: {section['data']['target']}\nRisk Level: {section['data']['risk_level']}\nFindings: {section['data']['key_findings']}")
+                txt = f"Target: {section['data']['target']}\nRisk Level: {section['data']['risk_level']}\nFindings: {section['data']['key_findings']}"
+                pdf.multi_cell(0, 10, _pdf_safe(txt))
             else:
-                pdf.multi_cell(0, 10, json.dumps(section["data"], indent=2))
+                pdf.multi_cell(0, 10, _pdf_safe(json.dumps(section["data"], indent=2)))
             
             pdf.ln(10)
 
@@ -153,7 +161,9 @@ class ReportGenerator:
         pdf.set_font('helvetica', '', 10)
         pdf.ln(5)
         report_hash = hashlib.sha256(json.dumps(self.report_data).encode()).hexdigest()
-        pdf.multi_cell(0, 10, f"Total Evidence Items: {self.report_data['metadata']['evidence_count']}\nTools Used: {', '.join(set(self.report_data['metadata']['tools_used']))}\nReport Global SHA-256: {report_hash}")
+        tools_str = ", ".join(set(self.report_data["metadata"]["tools_used"])) if self.report_data["metadata"]["tools_used"] else "N/A"
+        meta_txt = f"Total Evidence Items: {self.report_data['metadata']['evidence_count']}\nTools Used: {tools_str}\nReport Global SHA-256: {report_hash}"
+        pdf.multi_cell(0, 10, _pdf_safe(meta_txt))
 
         return pdf.output()
     

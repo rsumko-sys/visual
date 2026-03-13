@@ -31,10 +31,10 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    const message = error.response?.data?.detail
-      ? (typeof error.response.data.detail === 'string'
-          ? error.response.data.detail
-          : JSON.stringify(error.response.data.detail))
+    const data = error.response?.data as { detail?: string | object } | undefined;
+    const detail = data?.detail;
+    const message = detail
+      ? (typeof detail === 'string' ? detail : JSON.stringify(detail))
       : error.message || 'Помилка мережі';
     window.dispatchEvent(new CustomEvent('api-error', { detail: { message, error } }));
     return Promise.reject(error);

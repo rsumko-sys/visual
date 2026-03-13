@@ -53,10 +53,10 @@ export default function Layout({ children }: LayoutProps) {
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0a0c10', color: '#fff' }}>
       <Box
         sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}
-        onClick={() => router.push('/')}
+        onClick={() => { router.push('/'); setMobileOpen(false); }}
         role="button"
         tabIndex={0}
-        onKeyDown={(e) => e.key === 'Enter' && router.push('/')}
+        onKeyDown={(e) => { if (e.key === 'Enter') { router.push('/'); setMobileOpen(false); } }}
       >
         <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
           <OSINTIcon />
@@ -78,8 +78,8 @@ export default function Layout({ children }: LayoutProps) {
               component="div"
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && router.push(item.path)}
-              onClick={() => router.push(item.path)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { router.push(item.path); setMobileOpen(false); } }}
+              onClick={() => { router.push(item.path); setMobileOpen(false); }}
               sx={{
                 borderRadius: 2,
                 mb: 1,
@@ -111,8 +111,8 @@ export default function Layout({ children }: LayoutProps) {
               component="div"
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => e.key === 'Enter' && router.push(item.path)}
-              onClick={() => router.push(item.path)}
+              onKeyDown={(e) => { if (e.key === 'Enter') { router.push(item.path); setMobileOpen(false); } }}
+              onClick={() => { router.push(item.path); setMobileOpen(false); }}
               sx={{
                 borderRadius: 2,
                 mb: 0.5,
@@ -173,9 +173,9 @@ export default function Layout({ children }: LayoutProps) {
           </Box>
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            <Tooltip title="Notifications">
+            <Tooltip title="Сповіщення / Історія">
               <IconButton color="inherit" size="small" onClick={() => router.push('/history')}>
-                <Badge badgeContent={4} color="error">
+                <Badge badgeContent={0} color="error">
                   <NotificationsIcon fontSize="small" />
                 </Badge>
               </IconButton>
@@ -217,7 +217,7 @@ export default function Layout({ children }: LayoutProps) {
         </Drawer>
       </Box>
 
-      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', flexGrow: 1 }}>
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', flexGrow: 1, minWidth: 0 }}>
         <Box
           component="main"
           sx={{
@@ -225,6 +225,8 @@ export default function Layout({ children }: LayoutProps) {
             p: 3,
             width: { sm: `calc(100% - ${drawerWidth}px)` },
             mt: '64px',
+            overflow: 'auto',
+            minHeight: 0,
           }}
         >
           {children}
@@ -232,6 +234,7 @@ export default function Layout({ children }: LayoutProps) {
         <Box
           component="footer"
           sx={{
+            flexShrink: 0,
             py: 2,
             px: 3,
             borderTop: '1px solid rgba(255,255,255,0.05)',

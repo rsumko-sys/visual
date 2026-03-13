@@ -33,9 +33,16 @@ export default function SettingsPage() {
         <Typography variant="subtitle1" sx={{ color: '#fff', mb: 2 }}>API Endpoint</Typography>
         <TextField
           fullWidth
+          label="URL API (наприклад: http://localhost:8000)"
           value={apiUrl}
           onChange={(e) => setApiUrl(e.target.value)}
-          sx={{ mb: 3, '& .MuiInputBase-root': { color: '#fff' } }}
+          sx={{ 
+            mb: 3, 
+            '& .MuiInputBase-root': { color: '#fff' },
+            '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' },
+            '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+            '& .MuiOutlinedInput-root:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+          }}
         />
         <FormControlLabel
           control={<Switch defaultChecked color="primary" />}

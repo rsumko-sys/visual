@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Box, Typography, List, ListItem, ListItemText, Chip, Paper } from '@mui/material';
-import { History as HistoryIcon } from '@mui/icons-material';
+import { Box, Typography, List, ListItem, ListItemText, Chip, Paper, Button } from '@mui/material';
+import { History as HistoryIcon, Search as SearchIcon } from '@mui/icons-material';
+import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 
 export default function HistoryPage() {
+  const router = useRouter();
   const [investigations] = useState<Array<{ id: string; query: string; date: string; tools: number }>>([]);
 
   return (
@@ -23,9 +25,12 @@ export default function HistoryPage() {
           <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
             Історія порожня
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', mb: 3, display: 'block' }}>
             Запустіть розслідування в Investigation Hub, щоб зберегти історію
           </Typography>
+          <Button variant="contained" color="primary" startIcon={<SearchIcon />} onClick={() => router.push('/investigation')}>
+            Почати дослідження
+          </Button>
         </Paper>
       ) : (
         <List>
