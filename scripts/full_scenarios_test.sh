@@ -27,9 +27,9 @@ log "3. Tools stats..."
 code=$(curl -s -o /dev/null -w "%{http_code}" "$API/tools/stats")
 [ "$code" = "200" ] && ok "stats $code" || fail "stats $code"
 
-log "4. Tool detail (maigret)..."
-code=$(curl -s -o /dev/null -w "%{http_code}" "$API/tools/maigret")
-[ "$code" = "200" ] && ok "maigret $code" || fail "maigret $code"
+log "4. Tool detail (maigret_v3)..."
+code=$(curl -s -o /dev/null -w "%{http_code}" "$API/tools/maigret_v3")
+[ "$code" = "200" ] && ok "maigret_v3 $code" || fail "maigret_v3 $code"
 
 # 5. Investigations (needs auth)
 log "5. Investigations create..."

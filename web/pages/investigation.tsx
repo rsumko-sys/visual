@@ -66,7 +66,7 @@ export default function InvestigationHub() {
   }, []);
 
   const availableTools: AvailableTool[] = [
-    { id: 'maigret', name: 'Maigret v3.0', category: 'SOCMINT' },
+    { id: 'maigret_v3', name: 'Maigret v3.0', category: 'SOCMINT' },
     { id: 'shodan', name: 'Shodan', category: 'SIGINT' },
     { id: 'geospy', name: 'GeoSpy.ai', category: 'GEOINT' },
     { id: 'pimeyes', name: 'Pimeyes', category: 'IMINT' },
