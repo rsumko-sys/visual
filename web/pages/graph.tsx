@@ -124,7 +124,7 @@ function getNodePositions(nodes: Array<{ data: { id: string } }>, cx: number, cy
 
 export default function VisualGraphPage() {
   const router = useRouter();
-  const { nodes: evidenceNodes, edges: evidenceEdges } = useGraphEvidence();
+  const { nodes: evidenceNodes, edges: evidenceEdges, clearEvidence } = useGraphEvidence();
   const [searchQuery, setSearchQuery] = useState('');
   const [graphSettings, setGraphSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [snackbar, setSnackbar] = useState('');
@@ -204,7 +204,7 @@ export default function VisualGraphPage() {
   return (
     <Layout>
       <ErrorBoundary>
-      <Box data-print-hide sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <Box data-print-hide sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
             Visual Intelligence Graph
@@ -213,15 +213,16 @@ export default function VisualGraphPage() {
             Visualize connections between entities and map the investigation surface
           </Typography>
         </Box>
-        <Box sx={{ display: 'flex', gap: 1 }}>
+        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+          <Button variant="outlined" startIcon={<ResetIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => { clearEvidence(); setGraphSettings(DEFAULT_SETTINGS); setSelectedNodeId('Target'); setSnackbar('Граф скинуто'); }}>Reload</Button>
           <Button variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => { navigator.clipboard?.writeText(typeof window !== 'undefined' ? window.location.href : ''); setSnackbar('Посилання скопійовано'); }}>Share</Button>
           <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleExportImage}>Export Image</Button>
           <Button variant="outlined" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => window.print()}>Print / PDF</Button>
         </Box>
       </Box>
 
-      <Box data-print-graph-page sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'stretch' }}>
-        <Box sx={{ flex: { md: '0 0 300px' }, maxWidth: { md: 300 }, minWidth: { xs: 0, md: 260 }, order: 1 }}>
+      <Box data-print-graph-page sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'stretch', position: 'relative', zIndex: 2, pointerEvents: 'auto', isolation: 'isolate' }}>
+        <Box sx={{ flex: { md: '0 0 300px' }, maxWidth: { md: 300 }, minWidth: { xs: 0, md: 260 }, order: 1, pointerEvents: 'auto' }}>
           <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, mb: 3 }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Graph Search</Typography>
             <TextField
@@ -273,8 +274,8 @@ export default function VisualGraphPage() {
           </Paper>
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0, order: 2, overflow: 'hidden' }}>
-          <Paper data-graph-canvas sx={{ height: { xs: 400, sm: 550, md: 700 }, minHeight: 300, bgcolor: '#0a0c10', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
+        <Box sx={{ flex: 1, minWidth: 0, order: 2, overflow: 'hidden', pointerEvents: 'auto' }}>
+          <Paper data-graph-canvas sx={{ height: { xs: 400, sm: 550, md: 700 }, minHeight: 300, bgcolor: '#0a0c10', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '30px 30px', pointerEvents: 'auto' }}>
             <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 0.5, zIndex: 10, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', p: 0.25, borderRadius: 1.5, border: '1px solid rgba(255,255,255,0.08)' }}>
               <Tooltip title="Zoom In" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.min(3, s.nodeScale + 0.2) }))}><ZoomInIcon /></IconButton></Tooltip>
               <Tooltip title="Zoom Out" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.max(0.5, s.nodeScale - 0.2) }))}><ZoomOutIcon /></IconButton></Tooltip>
@@ -301,7 +302,7 @@ export default function VisualGraphPage() {
                   const isSelected = selectedNodeId === n.data.id;
                   const color = nodeTypeColors[n.data.type] || '#666';
                   return (
-                    <g key={n.data.id} onClick={() => setSelectedNodeId(n.data.id)} style={{ cursor: 'pointer' }}>
+                    <g key={n.data.id} onClick={() => setSelectedNodeId(n.data.id)} style={{ cursor: 'pointer', pointerEvents: 'auto' }}>
                       <circle cx={pos.x} cy={pos.y} r={r} fill={color} stroke={isSelected ? '#00d4aa' : 'transparent'} strokeWidth={isSelected ? 4 : 0} />
                       {showLabels && <text x={pos.x} y={pos.y + r + 16} textAnchor="middle" fill="#fff" fontSize={12} style={{ textShadow: '0 1px 2px #222', pointerEvents: 'none' }}>{n.data.label}</text>}
                     </g>
