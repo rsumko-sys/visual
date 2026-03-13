@@ -1,4 +1,4 @@
-# Cache bust: 2026-03-13 force rebuild for Alembic fix
+# Cache bust: 2026-03-13b force full rebuild (Alembic reinit)
 FROM python:3.11-slim AS builder
 
 WORKDIR /app
