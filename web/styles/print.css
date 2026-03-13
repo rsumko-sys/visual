@@ -1,0 +1,64 @@
+/* Print styles: preserve structure, dark graph */
+@media print {
+  /* Hide layout chrome - sidebar, app bar, footer, buttons */
+  nav,
+  .MuiDrawer-root,
+  .MuiAppBar-root,
+  footer,
+  button,
+  .MuiButton-root,
+  .MuiIconButton-root,
+  [data-print-hide] {
+    display: none !important;
+    visibility: hidden !important;
+  }
+
+  /* Preserve background colors when printing */
+  [data-graph-canvas],
+  [data-graph-canvas] * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  body {
+    background: #0a0c10 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Graph canvas: dark background, full width, visible */
+  [data-graph-canvas] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    background: #0a0c10 !important;
+    width: 100% !important;
+    min-height: 600px !important;
+    height: 700px !important;
+    page-break-inside: avoid;
+    border: 1px solid rgba(255,255,255,0.2) !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  /* Hide left sidebar on graph page when printing */
+  [data-print-graph-page] > div:first-of-type {
+    display: none !important;
+  }
+
+  /* Graph area takes full width when printing */
+  [data-print-graph-page] > div:last-of-type {
+    flex: 1 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  /* Ensure main content uses full width */
+  main {
+    margin-top: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    background: #0a0c10 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
