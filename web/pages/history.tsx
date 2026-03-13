@@ -69,7 +69,10 @@ export default function HistoryPage() {
       ) : error ? (
         <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
           <Typography variant="body1" sx={{ color: 'error.main', mb: 2 }}>{error}</Typography>
-          <Button type="button" variant="outlined" color="primary" onClick={() => router.push('/investigation')}>Почати дослідження</Button>
+          <Box sx={{ display: 'flex', gap: 1, justifyContent: 'center', flexWrap: 'wrap' }}>
+            <Button type="button" variant="contained" color="primary" onClick={() => { setError(null); setLoading(true); api.get<InvItem[]>('/investigations/').then((res) => { setInvestigations(res.data || []); setError(null); }).catch(() => setError('Не вдалося завантажити історію')).finally(() => setLoading(false)); }}>Повторити</Button>
+            <Button type="button" variant="outlined" color="primary" onClick={() => router.push('/investigation')}>Почати дослідження</Button>
+          </Box>
         </Paper>
       ) : investigations.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>

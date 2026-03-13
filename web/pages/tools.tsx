@@ -181,7 +181,7 @@ export default function ToolsPage() {
 
   return (
     <Layout>
-      <Container maxWidth="xl" sx={{ mx: 'auto', width: '100%', boxSizing: 'border-box' }}>
+      <Container maxWidth="xl" sx={{ mx: 'auto', width: '100%', boxSizing: 'border-box', position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
       <Box sx={{ mb: 3 }}>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 2, color: '#fff', fontSize: { xs: '1.5rem', sm: '1.75rem' }, letterSpacing: '0.02em' }}>
           Набір OSINT Інструментів

@@ -82,8 +82,9 @@ async def get_task_status(task_id: str):
 @router.get("/{tool_id}", response_model=ToolInfo)
 async def get_tool_detail(tool_id: str):
     """Отримати детальну інформацію про інструмент"""
+    tool_id_resolved = "maigret_v3" if tool_id == "maigret" else tool_id
     for tool in ALL_TOOLS_LIST:
-        if tool["id"] == tool_id:
+        if tool["id"] == tool_id_resolved:
             return tool
     raise HTTPException(status_code=404, detail=f"Інструмент з ID '{tool_id}' не знайдений")
 

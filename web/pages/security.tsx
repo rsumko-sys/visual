@@ -15,6 +15,7 @@ export default function SecurityPage() {
 
   return (
     <Layout>
+      <Box sx={{ position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
           Безпека
@@ -62,6 +63,7 @@ export default function SecurityPage() {
           ))}
         </List>
       </Paper>
+      </Box>
     </Layout>
   );
 }

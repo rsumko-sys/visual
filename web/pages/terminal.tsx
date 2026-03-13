@@ -62,6 +62,7 @@ export default function TerminalPage() {
 
   return (
     <Layout>
+      <Box sx={{ position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
           Terminal
@@ -123,6 +124,7 @@ export default function TerminalPage() {
           <IconButton type="submit" color="primary"><SendIcon /></IconButton>
         </form>
       </Paper>
+      </Box>
     </Layout>
   );
 }

@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 export default function HomePage() {
   const router = useRouter();
   return (
-    <Container maxWidth="lg" sx={{ py: 8, px: { xs: 2, sm: 3 }, width: '100%' }}>
+    <Container maxWidth="lg" sx={{ py: 8, px: { xs: 2, sm: 3 }, width: '100%', position: 'relative', zIndex: 2, pointerEvents: 'auto' }}>
       <Box sx={{ mb: 6, maxWidth: 720, mx: 'auto', textAlign: 'center' }}>
         <Typography variant="h3" component="h1" sx={{ fontWeight: 900, mb: 2, color: 'text.primary', wordBreak: 'break-word' }}>
           OSINT Command Center
