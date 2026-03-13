@@ -15,7 +15,7 @@
 - [x] 4. Змінні API (SECRET_KEY, DATABASE_URL, REDIS_URL, CELERY_*) — оновлено
 - [x] 5. NEXT_PUBLIC_API_URL в dossier — встановлено
 - [x] 6. Redeploy dossier та API — виконано
-- [ ] 7. Додати Worker (див. нижче)
+- [x] 7. Worker — створено (serviceCreate + dockerfilePath)
 - [ ] 8. Зареєструвати користувача: `./scripts/register_admin.sh` або через UI
 
 ---

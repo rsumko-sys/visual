@@ -103,8 +103,7 @@ def main():
     print("\n=== Done ===")
     print("API:", API_DOMAIN)
     print("Dossier: https://dossier-production-871b.up.railway.app")
-    print("\n⚠️  Add Worker manually: Railway → + New → GitHub Repo → select worker/Dockerfile")
-    print("   Or: + New → Empty → Connect repo → set rootDirectory=worker (if supported)")
+    print("\n✅ Worker: створено через API (repo + dockerfilePath=worker/Dockerfile)")
     return 0
 
 
