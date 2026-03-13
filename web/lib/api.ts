@@ -19,17 +19,26 @@ export function normalizeApiUrl(url: string): string {
   return clean;
 }
 
+function isValidApiUrl(url: string): boolean {
+  const u = url.trim();
+  return u.length > 5 && /^https?:\/\/[^/]/i.test(u);
+}
+
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(STORAGE_KEY);
     const isProductionDossier = window.location.hostname?.includes('railway.app');
     if (stored) {
-      const clean = normalizeApiUrl(stored) || stored.replace(/\/$/, '');
+      const clean = normalizeApiUrl(stored) || stored.replace(/\/$/, '').trim();
       // На production Dossier — не використовувати localhost
       if (isProductionDossier && (clean.includes('localhost') || clean.includes('127.0.0.1'))) {
         return PRODUCTION_API;
       }
-      return clean;
+      // Порожній або невалідний URL — fallback на production
+      if (isProductionDossier && !isValidApiUrl(clean)) {
+        return PRODUCTION_API;
+      }
+      if (isValidApiUrl(clean)) return clean;
     }
     if (isProductionDossier) return PRODUCTION_API;
   }

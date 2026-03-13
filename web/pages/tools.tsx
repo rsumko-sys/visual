@@ -82,7 +82,7 @@ export default function ToolsPage() {
     }
   }, [router.query.tool, loading, categories, router]);
 
-  const fetchTools = async () => {
+  const fetchTools = async (retryAfterClear = false) => {
     try {
       setLoading(true);
       setLoadError(false);
@@ -90,6 +90,16 @@ export default function ToolsPage() {
       setCategories(response.data?.categories ?? {});
     } catch (error) {
       console.error('Failed to fetch tools:', error);
+      // На production — якщо Network Error, можливо невалідний URL в localStorage
+      const isProduction = typeof window !== 'undefined' && window.location.hostname?.includes('railway.app');
+      const isNetworkError = (error as { message?: string })?.message === 'Network Error';
+      if (isProduction && isNetworkError && !retryAfterClear) {
+        const stored = localStorage.getItem('NEXT_PUBLIC_API_URL');
+        if (stored && (!stored.startsWith('https://') || stored.includes('localhost'))) {
+          localStorage.removeItem('NEXT_PUBLIC_API_URL');
+          return fetchTools(true);
+        }
+      }
       setLoadError(true);
       showSnackbar('Не вдалося завантажити каталог. Перевірте API URL в Налаштуваннях.', 'error');
     } finally {
