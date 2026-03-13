@@ -17,4 +17,4 @@ alembic upgrade 99c58f04711c || true
 echo "Starting application..."
 
 # Start app
-exec uvicorn app.main:app --host 0.0.0.0 --port "${PORT:-8000}"
+exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}
