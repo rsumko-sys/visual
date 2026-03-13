@@ -30,6 +30,9 @@ class Settings(BaseSettings):
             sys.exit(1)
         return self
 
+    # Password-only auth: newline-separated list. Each line = one valid password.
+    ALLOWED_PASSWORDS: str = os.getenv("ALLOWED_PASSWORDS", "")
+
     # API Keys (external services, set in .env)
     SHODAN_KEY: str = os.getenv("SHODAN_KEY") or os.getenv("SHODAN_API_KEY") or ""
     CENSYS_ID: str = os.getenv("CENSYS_ID") or os.getenv("CENSYS_API_ID") or ""

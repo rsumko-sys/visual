@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request, Body
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
@@ -18,6 +18,12 @@ router = APIRouter()
 security = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def _allowed_passwords_set() -> set[str]:
+    raw = (settings.ALLOWED_PASSWORDS or "").strip()
+    if not raw:
+        return set()
+    return {p.strip() for p in raw.replace(",", "\n").splitlines() if p.strip()}
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password[:72], hashed_password)
@@ -52,6 +58,29 @@ async def register(
     db.commit()
     db.refresh(new_user)
     return new_user
+
+@router.post("/pass", response_model=Token, responses={401: {"description": "Invalid password"}})
+@limiter.limit("5/minute")
+async def login_by_password(
+    request: Request,
+    password: Annotated[str, Body(embed=True)],
+    db: Annotated[Session, Depends(get_db)]
+):
+    """Password-only login. ALLOWED_PASSWORDS in .env — один пароль на рядок."""
+    allowed = _allowed_passwords_set()
+    if not allowed:
+        raise HTTPException(status_code=503, detail="ALLOWED_PASSWORDS not configured")
+    if password not in allowed:
+        raise HTTPException(status_code=401, detail="Invalid credentials")
+    user = db.query(User).filter(User.username == "system").first()
+    if not user:
+        user = User(username="system", email="system@local", hashed_password=get_password_hash("system"))
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    access_token = create_access_token(data={"sub": user.id})
+    return {"access_token": access_token, "token_type": "bearer"}
+
 
 @router.post("/token", response_model=Token, responses={401: {"description": "Invalid credentials"}})
 @limiter.limit("5/minute")
