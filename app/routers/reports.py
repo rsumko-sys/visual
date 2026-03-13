@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Header
-from typing import Annotated
+from typing import Annotated, Optional
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Investigation, Evidence, User
+from app.core.auth_helpers import get_investigation_with_auth
 from app.reporting import (
     ReportGenerator, ReportFormat
 )
@@ -18,15 +19,10 @@ router = APIRouter()
 async def get_investigation_summary(
     investigation_id: str,
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[str | None, Header()] = None
+    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Отримати резюме розслідування"""
-    investigation = db.query(Investigation).filter(
-        Investigation.id == investigation_id
-    ).first()
-    
-    if not investigation:
-        raise HTTPException(status_code=404, detail="Investigation not found")
+    investigation = get_investigation_with_auth(investigation_id, db, authorization)
     
     evidence = db.query(Evidence).filter(
         Evidence.investigation_id == investigation_id
@@ -54,11 +50,12 @@ async def add_evidence(
     investigation_id: str,
     evidence: Annotated[dict, Body(...)],
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[str | None, Header()] = None
+    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Додати доказ до Evidence Vault з хешуванням для ланцюжка довіри"""
-    # Auto-create Investigation якщо не існує (для frontend-generated inv_xxx ids)
     inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+    if inv:
+        get_investigation_with_auth(investigation_id, db, authorization)
     if not inv:
         # Ensure system user exists for owner_id FK
         from passlib.context import CryptContext
@@ -102,9 +99,10 @@ async def add_evidence(
 async def get_evidence(
     investigation_id: str,
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[str | None, Header()] = None
+    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Отримати всі докази для розслідування з перевіркою цілісності"""
+    get_investigation_with_auth(investigation_id, db, authorization)
     evidence_list = db.query(Evidence).filter(Evidence.investigation_id == investigation_id).all()
     result = []
     for ev in evidence_list:
@@ -147,14 +145,10 @@ async def generate_investigation_report(
     db: Annotated[Session, Depends(get_db)],
     format: Annotated[str, Query()] = "json",
     include_analysis: Annotated[bool, Query()] = True,
-    authorization: Annotated[str | None, Header()] = None
+    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Згенерувати ЗАГАЛЬНИЙ ЗВІТ розслідування"""
-    investigation = db.query(Investigation).filter(
-        Investigation.id == investigation_id
-    ).first()
-    if not investigation:
-        raise HTTPException(status_code=404, detail="Investigation not found")
+    investigation = get_investigation_with_auth(investigation_id, db, authorization)
     evidence_list = db.query(Evidence).filter(
         Evidence.investigation_id == investigation_id
     ).all()

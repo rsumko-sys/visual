@@ -3,7 +3,7 @@ import {
   Box, Typography, Grid, Card, CardContent, TextField, 
   Button, Chip, Divider, List, ListItem, ListItemText,
   ListItemIcon, Paper, Stepper, Step, StepLabel, 
-  IconButton, Tooltip, LinearProgress, Avatar
+  IconButton, Tooltip, LinearProgress, Avatar, Snackbar, Alert
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
@@ -18,6 +18,7 @@ import {
 } from '@mui/icons-material';
 import api from '../lib/api';
 import Layout from '../components/Layout';
+import { useAuth } from '../context/auth';
 
 interface SelectedTool {
   id: string;
@@ -39,6 +40,7 @@ interface ResultItem {
 }
 
 export default function InvestigationHub() {
+  const { token } = useAuth();
   const [query, setQuery] = useState<string>('');
   const [selectedTools, setSelectedTools] = useState<SelectedTool[]>([]);
   const [investigationStatus, setInvestigationStatus] = useState<'idle' | 'running' | 'completed'>('idle');
@@ -94,8 +96,10 @@ export default function InvestigationHub() {
   };
 
   // Export PDF report
+  const [pdfError, setPdfError] = useState<string | null>(null);
   const handleExportPDF = async () => {
     if (!currentInvestigationId) return;
+    setPdfError(null);
     try {
       const response = await api.post(`/reports/${currentInvestigationId}/generate-report?format=pdf`, {}, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
@@ -103,14 +107,34 @@ export default function InvestigationHub() {
       a.href = url;
       a.download = `osint_report_${currentInvestigationId}.pdf`;
       a.click();
-    } catch (error) {
-      console.error('PDF export failed:', error);
+    } catch (error: unknown) {
+      const msg = error && typeof error === 'object' && 'response' in error
+        ? (error as { response?: { status?: number } }).response?.status === 500
+          ? 'Помилка генерації PDF (сервер)'
+          : 'Помилка експорту PDF'
+        : 'Помилка експорту PDF';
+      setPdfError(msg);
     }
   };
 
   const handleStartInvestigation = async () => {
     if (!query || selectedTools.length === 0) return;
-    
+
+    let invId = currentInvestigationId;
+    if (token) {
+      try {
+        const invRes = await api.post<{ id: string }>('/investigations/', {
+          title: query,
+          description: query,
+          target_identifier: query,
+        });
+        invId = invRes.data.id;
+        setCurrentInvestigationId(invId);
+      } catch {
+        // Fallback на inv_xxx при помилці
+      }
+    }
+
     setInvestigationStatus('running');
     const currentTools = [...selectedTools];
     setResults([]);
@@ -123,7 +147,7 @@ export default function InvestigationHub() {
         // 1. Запуск задачі на бекенді
         const response = await api.post(`/tools/${tool.id}/run`, {
           query: query,
-          investigation_id: currentInvestigationId,
+          investigation_id: invId,
           api_key: localStorage.getItem(`api_key_${tool.id}`) || ''
         });
         const taskId = response.data.task_id;
@@ -142,7 +166,7 @@ export default function InvestigationHub() {
             }]);
             // Save result to Evidence Vault immediately
             try {
-              await api.post(`/reports/${currentInvestigationId}/evidence`, {
+              await api.post(`/reports/${invId}/evidence`, {
                 source: tool.name,
                 data: JSON.stringify(statusRes.data.result.data, null, 2),
                 target: query,
@@ -362,6 +386,9 @@ export default function InvestigationHub() {
           </Paper>
         </Grid>
       </Grid>
+      <Snackbar open={!!pdfError} autoHideDuration={6000} onClose={() => setPdfError(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
+        <Alert severity="error" onClose={() => setPdfError(null)}>{pdfError}</Alert>
+      </Snackbar>
     </Layout>
   );
 }

@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     # Redis (set in .env)
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-    # JWT (set in .env)
+    # JWT — set SECRET_KEY or JWT_SECRET_KEY in .env for production (required for stable tokens)
     SECRET_KEY: str = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30

@@ -1,7 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database import get_db
 from app.models import Evidence, Investigation
+from app.core.auth_helpers import get_investigation_with_auth
 import hashlib
 import json
 import uuid
@@ -20,12 +22,11 @@ async def store_evidence(
     source: str = Form(...),
     data: str = Form(...),
     metadata: Optional[str] = Form(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
 ):
     """Зберегти доказ у сховище з автоматичним хешуванням"""
-    investigation = db.query(Investigation).filter(Investigation.id == investigation_id).first()
-    if not investigation:
-        raise HTTPException(status_code=404, detail="Investigation not found")
+    get_investigation_with_auth(investigation_id, db, authorization)
 
     evidence_hash = calculate_hash(data)
     
@@ -50,11 +51,13 @@ async def store_evidence(
     }
 
 @router.get("/{investigation_id}/export/stix")
-async def export_to_stix(investigation_id: str, db: Session = Depends(get_db)):
+async def export_to_stix(
+    investigation_id: str,
+    db: Session = Depends(get_db),
+    authorization: Optional[str] = Header(None)
+):
     """Експорт зібраних доказів в універсальному форматі STIX 2.1 (Золотий стандарт OSINT)"""
-    investigation = db.query(Investigation).filter(Investigation.id == investigation_id).first()
-    if not investigation:
-        raise HTTPException(status_code=404, detail="Investigation not found")
+    investigation = get_investigation_with_auth(investigation_id, db, authorization)
     
     evidence_list = db.query(Evidence).filter(Evidence.investigation_id == investigation_id).all()
     
@@ -93,7 +96,7 @@ async def export_to_stix(investigation_id: str, db: Session = Depends(get_db)):
             "id": indicator_id,
             "name": f"Evidence from {item.source}",
             "description": f"Raw data hash: {item.hash_sha256}",
-            "indicator_types": ["malicious-activity" if "risk" in item.data.lower() else "unknown"],
+            "indicator_types": ["malicious-activity" if "risk" in str(item.data or "").lower() else "unknown"],
             "pattern": f"[file:hashes.'SHA-256' = '{item.hash_sha256}']",
             "pattern_type": "stix",
             "valid_from": item.created_at.isoformat() + "Z"

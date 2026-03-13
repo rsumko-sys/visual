@@ -6,6 +6,7 @@
 import axios, { AxiosError } from 'axios';
 
 const STORAGE_KEY = 'NEXT_PUBLIC_API_URL';
+const TOKEN_KEY = 'osint_auth_token';
 
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
@@ -21,9 +22,13 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Динамічний baseURL при кожному запиті (для змін з Settings)
+// Динамічний baseURL та Authorization при кожному запиті
 api.interceptors.request.use((config) => {
   config.baseURL = getApiBaseUrl();
+  if (typeof window !== 'undefined') {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (t) config.headers.Authorization = `Bearer ${t}`;
+  }
   return config;
 });
 
