@@ -32,10 +32,17 @@ app.add_middleware(SlowAPIMiddleware)
 # Security middleware
 app.add_middleware(SecurityMiddleware)
 
-# CORS middleware
+# CORS middleware (allow_credentials=True + wildcard = blocked by browser; must list origins)
+CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "https://dossier-production-871b.up.railway.app",
+]
+if os.getenv("CORS_ORIGINS"):
+    CORS_ORIGINS.extend(o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip())
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
