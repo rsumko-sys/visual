@@ -15,7 +15,7 @@ import {
   Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
-import api from '../lib/api';
+import api, { getApiBaseUrl } from '../lib/api';
 import Layout from '../components/Layout';
 import PolishedSlider from '../components/PolishedSlider';
 import { useDebounce } from '../hooks/useDebounce';
@@ -50,6 +50,7 @@ export default function ToolsPage() {
   const [categories, setCategories] = useState<{ [key: string]: CategoryData }>({});
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [errorDetail, setErrorDetail] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
@@ -86,13 +87,17 @@ export default function ToolsPage() {
     try {
       setLoading(true);
       setLoadError(false);
+      setErrorDetail('');
       const response = await api.get('/tools/');
       setCategories(response.data?.categories ?? {});
     } catch (error) {
       console.error('Failed to fetch tools:', error);
+      const err = error as { message?: string; code?: string };
+      const apiUrl = typeof window !== 'undefined' ? getApiBaseUrl() : '';
+      setErrorDetail(`${err.message || 'Unknown'} | API: ${apiUrl || 'N/A'}`);
       // На production — якщо Network Error, можливо невалідний URL в localStorage
       const isProduction = typeof window !== 'undefined' && window.location.hostname?.includes('railway.app');
-      const isNetworkError = (error as { message?: string })?.message === 'Network Error';
+      const isNetworkError = err.message === 'Network Error';
       if (isProduction && isNetworkError && !retryAfterClear) {
         const stored = localStorage.getItem('NEXT_PUBLIC_API_URL');
         if (stored && (!stored.startsWith('https://') || stored.includes('localhost'))) {
@@ -298,10 +303,29 @@ export default function ToolsPage() {
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: loadError ? 2 : 0 }}>
             {loadError ? 'Перевірте підключення до API в Налаштуваннях або натисніть Повторити' : 'Спробуйте змінити критерії пошуку'}
           </Typography>
+          {loadError && errorDetail && (
+            <Typography variant="caption" sx={{ display: 'block', color: 'rgba(255,255,255,0.35)', mb: 1.5, fontFamily: 'monospace' }}>
+              {errorDetail}
+            </Typography>
+          )}
           {loadError && (
-            <Button variant="contained" color="primary" onClick={fetchTools} sx={{ mt: 1 }}>
-              Повторити
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+              <Button variant="contained" color="primary" onClick={() => fetchTools()}>
+                Повторити
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    localStorage.removeItem('NEXT_PUBLIC_API_URL');
+                    fetchTools();
+                  }
+                }}
+              >
+                Скинути API URL
+              </Button>
+            </Box>
           )}
         </Box>
       ) : (

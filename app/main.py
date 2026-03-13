@@ -40,9 +40,12 @@ CORS_ORIGINS = [
 ]
 if os.getenv("CORS_ORIGINS"):
     CORS_ORIGINS.extend(o.strip() for o in os.getenv("CORS_ORIGINS", "").split(",") if o.strip())
+# Дозволити будь-який Railway deployment (dossier може мати інший subdomain після redeploy)
+CORS_ORIGIN_REGEX = r"https://[a-z0-9-]+\.(up\.)?railway\.app"
 app.add_middleware(
     CORSMiddleware,
     allow_origins=CORS_ORIGINS,
+    allow_origin_regex=CORS_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
