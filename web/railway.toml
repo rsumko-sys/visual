@@ -2,7 +2,8 @@
 # Deploy from web/ directory or set Root Directory = web in Railway
 
 [build]
-builder = "NIXPACKS"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 watchPatterns = [
   "**/*.ts",
