@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, Paper, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button, Paper, Alert, Tabs, Tab } from '@mui/material';
 import { TravelExplore as OSINTIcon } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import api from '../lib/api';
@@ -8,9 +8,12 @@ import { useAuth } from '../context/auth';
 export default function LoginPage() {
   const router = useRouter();
   const { login, isAuthenticated } = useAuth();
+  const [mode, setMode] = useState<'login' | 'register'>('login');
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const redirect = (router.query.redirect as string) || '/';
@@ -21,7 +24,7 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, redirect, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username || !password) return;
     setError(null);
@@ -45,6 +48,26 @@ export default function LoginPage() {
     }
   };
 
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!username || !email || !password) return;
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      await api.post('/auth/register', { username, email, password });
+      setSuccess('Обліковий запис створено. Увійдіть.');
+      setMode('login');
+    } catch (e: unknown) {
+      const data = e && typeof e === 'object' && 'response' in e
+        ? (e as { response?: { data?: { detail?: string } } }).response?.data
+        : null;
+      setError(data?.detail || 'Помилка реєстрації');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <Box
       sx={{
@@ -60,7 +83,7 @@ export default function LoginPage() {
     >
       <Paper
         component="form"
-        onSubmit={handleSubmit}
+        onSubmit={mode === 'login' ? handleLogin : handleRegister}
         sx={{
           p: 4,
           maxWidth: 400,
@@ -78,9 +101,16 @@ export default function LoginPage() {
             <Typography variant="h5" sx={{ fontWeight: 800, color: '#fff' }}>
               MINIMAX <span style={{ color: '#00d4aa' }}>OSINT</span>
             </Typography>
-            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>Увійдіть для доступу</Typography>
+            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+              {mode === 'login' ? 'Увійдіть для доступу' : 'Створіть обліковий запис'}
+            </Typography>
           </Box>
         </Box>
+
+        <Tabs value={mode} onChange={(_, v) => { setMode(v); setError(null); setSuccess(null); }} sx={{ mb: 2, '& .MuiTab-root': { color: 'rgba(255,255,255,0.6)' }, '& .Mui-selected': { color: '#00d4aa' } }}>
+          <Tab label="Вхід" value="login" />
+          <Tab label="Реєстрація" value="register" />
+        </Tabs>
 
         <TextField
           fullWidth
@@ -96,13 +126,30 @@ export default function LoginPage() {
             '& .MuiOutlinedInput-root:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
           }}
         />
+        {mode === 'register' && (
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            sx={{
+              mb: 2,
+              '& .MuiInputBase-root': { color: '#fff' },
+              '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' },
+              '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+              '& .MuiOutlinedInput-root:hover fieldset': { borderColor: 'rgba(255,255,255,0.2)' },
+            }}
+          />
+        )}
         <TextField
           fullWidth
           type="password"
           label="Пароль"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          autoComplete="current-password"
+          autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
           sx={{
             mb: 2,
             '& .MuiInputBase-root': { color: '#fff' },
@@ -116,6 +163,11 @@ export default function LoginPage() {
             {error}
           </Alert>
         )}
+        {success && (
+          <Alert severity="success" sx={{ mb: 2, bgcolor: 'rgba(34,197,94,0.1)' }}>
+            {success}
+          </Alert>
+        )}
         <Button
           type="submit"
           fullWidth
@@ -124,11 +176,8 @@ export default function LoginPage() {
           disabled={loading}
           sx={{ py: 1.5, fontWeight: 700 }}
         >
-          {loading ? 'Вхід...' : 'Увійти'}
+          {loading ? (mode === 'login' ? 'Вхід...' : 'Реєстрація...') : (mode === 'login' ? 'Увійти' : 'Зареєструватися')}
         </Button>
-        <Typography variant="caption" sx={{ display: 'block', mt: 2, color: 'rgba(255,255,255,0.4)', textAlign: 'center' }}>
-          Немає облікового запису? Реєстрація через API /auth/register
-        </Typography>
       </Paper>
     </Box>
   );
