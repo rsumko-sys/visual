@@ -96,12 +96,13 @@ async def run_tool(
     api_key: str = None
 ):
     """Запустити інструмент (через Celery асинхронно)"""
+    tool_id_resolved = "maigret_v3" if tool_id == "maigret" else tool_id
     tool = None
     for t in ALL_TOOLS_LIST:
-        if t["id"] == tool_id:
+        if t["id"] == tool_id_resolved:
             tool = t
             break
-    
+
     if not tool:
         raise HTTPException(status_code=404, detail=f"Інструмент '{tool_id}' не знайдений")
 
@@ -113,9 +114,9 @@ async def run_tool(
         api_key = body.api_key or api_key
         options = body.options or {}
 
-    # Відправка задачі в чергу Celery
+    # Відправка задачі в чергу Celery (tool_id для Celery — resolved для провайдера)
     try:
-        task = run_osint_tool.delay(tool_id, query or "", investigation_id, api_key, options)
+        task = run_osint_tool.delay(tool_id_resolved, query or "", investigation_id, api_key, options)
         task_id = task.id
         status = "queued"
     except Exception as e:

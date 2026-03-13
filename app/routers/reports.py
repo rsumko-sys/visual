@@ -150,7 +150,9 @@ async def generate_investigation_report(
     findings_parts.append(f"Зібрано доказів: {len(evidence_list)}")
     findings = ". ".join(findings_parts) if findings_parts else "OSINT дослідження"
 
-    report = ReportGenerator(investigation_id)
+    inv_title = investigation.title or target
+    inv_created = investigation.created_at.isoformat() if investigation.created_at else ""
+    report = ReportGenerator(investigation_id, title=inv_title, created_at=inv_created)
     report.add_executive_summary(
         target=target,
         findings=findings,
@@ -162,7 +164,8 @@ async def generate_investigation_report(
     evidence_data = []
     for evidence in evidence_list:
         tool_result = _extract_tool_result(evidence)
-        evidence_data.append(tool_result)
+        tool_result_with_source = {"source": evidence.source or "unknown", **tool_result}
+        evidence_data.append(tool_result_with_source)
         src_lower = (evidence.source or "unknown").lower()
         if src_lower not in by_source:
             by_source[src_lower] = []

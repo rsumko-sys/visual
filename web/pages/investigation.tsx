@@ -14,11 +14,16 @@ import {
   AutoFixHigh as AgentIcon,
   CheckCircle as CheckCircleIcon,
   Science as LabIcon,
-  DataObject as JsonIcon
+  DataObject as JsonIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  AccountTree as GraphIcon,
+  PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import api from '../lib/api';
 import Layout from '../components/Layout';
 import { useAuth } from '../context/auth';
+import { useGraphEvidence } from '../context/graphEvidence';
 
 interface SelectedTool {
   id: string;
@@ -35,24 +40,26 @@ interface AvailableTool {
 
 interface ResultItem {
   tool: string;
+  toolId: string;
   data: string;
+  parsed?: { sites?: Array<{ site: string; url: string }>; urls?: string[]; found?: boolean };
   timestamp: string;
 }
 
 export default function InvestigationHub() {
   const { token } = useAuth();
+  const { addEvidenceFromMaigret } = useGraphEvidence();
   const [query, setQuery] = useState<string>('');
   const [selectedTools, setSelectedTools] = useState<SelectedTool[]>([]);
   const [investigationStatus, setInvestigationStatus] = useState<'idle' | 'running' | 'completed'>('idle');
   const [results, setResults] = useState<ResultItem[]>([]);
-  // Evidence Vault state
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [currentInvestigationId, setCurrentInvestigationId] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
+  const [expandedResult, setExpandedResult] = useState<number | null>(null);
 
   useEffect(() => {
-    // Ініціалізація унікального ID для сесії розслідування
     if (typeof window !== 'undefined') {
       setCurrentInvestigationId(`inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
     }
@@ -75,7 +82,6 @@ export default function InvestigationHub() {
     setSelectedTools(selectedTools.filter((t: SelectedTool) => t.id !== id));
   };
 
-  // Save results to Evidence Vault
   const handleSaveToVault = async () => {
     if (!currentInvestigationId || results.length === 0) return;
     setSaving(true);
@@ -95,7 +101,6 @@ export default function InvestigationHub() {
     setSaving(false);
   };
 
-  // Export PDF report
   const [pdfError, setPdfError] = useState<string | null>(null);
   const handleExportPDF = async () => {
     if (!currentInvestigationId) return;
@@ -131,7 +136,6 @@ export default function InvestigationHub() {
         invId = invRes.data.id;
         setCurrentInvestigationId(invId);
       } catch {
-        // Fallback на inv_xxx при помилці
       }
     }
 
@@ -144,14 +148,12 @@ export default function InvestigationHub() {
       tool.status = 'running';
       setSelectedTools([...currentTools]);
       try {
-        // 1. Запуск задачі на бекенді
         const response = await api.post(`/tools/${tool.id}/run`, {
           query: query,
           investigation_id: invId,
           api_key: localStorage.getItem(`api_key_${tool.id}`) || ''
         });
         const taskId = response.data.task_id;
-        // 2. Полінг статусу (Long Polling симуляція)
         let ready = false;
         let attempts = 0;
         while (!ready && attempts < 30) {
@@ -159,12 +161,27 @@ export default function InvestigationHub() {
           if (statusRes.data.ready) {
             ready = true;
             tool.status = 'completed';
+            const resData = statusRes.data.result?.data;
+            const dataStr = JSON.stringify(resData, null, 2);
+            const parsed = resData && typeof resData === 'object' ? (() => {
+              const sites = resData.sites || resData.profiles || [];
+              const urls = resData.urls || [];
+              const siteList = Array.isArray(sites) ? sites : Object.entries(sites).map(([site, info]: [string, unknown]) => ({
+                site,
+                url: typeof info === 'object' && info && 'url' in (info as object) ? String((info as { url?: string }).url || '') : ''
+              }));
+              return { sites: siteList, urls, found: resData.found };
+            })() : undefined;
+            if (parsed?.sites?.length && (tool.id === 'maigret' || tool.id === 'maigret_v3')) {
+              addEvidenceFromMaigret(query, parsed.sites.filter((s: { url?: string }) => s.url) as Array<{ site: string; url: string }>);
+            }
             setResults((prev: ResultItem[]) => [...prev, {
               tool: tool.name,
-              data: JSON.stringify(statusRes.data.result.data, null, 2),
+              toolId: tool.id,
+              data: dataStr,
+              parsed,
               timestamp: new Date().toLocaleTimeString()
             }]);
-            // Save result to Evidence Vault immediately
             try {
               await api.post(`/reports/${invId}/evidence`, {
                 source: tool.name,
@@ -172,7 +189,6 @@ export default function InvestigationHub() {
                 target: query,
               });
             } catch (e) {
-              // Ignore evidence save error for now
             }
           } else {
             await new Promise(resolve => setTimeout(resolve, 1000));
@@ -332,9 +348,16 @@ export default function InvestigationHub() {
                 <LabIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Investigation Pipeline</Typography>
               </Box>
-              {investigationStatus === 'running' && (
-                <Chip label="Processing..." size="small" color="primary" variant="outlined" />
-              )}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {investigationStatus !== 'idle' && currentInvestigationId && (
+                  <Button size="small" variant="outlined" startIcon={<PdfIcon />} sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={handleExportPDF}>
+                    Download PDF Report
+                  </Button>
+                )}
+                {investigationStatus === 'running' && (
+                  <Chip label="Processing..." size="small" color="primary" variant="outlined" />
+                )}
+              </Box>
             </Box>
 
             <Box sx={{ p: 3, flexGrow: 1, position: 'relative', overflow: 'hidden', minHeight: 400, isolation: 'isolate' }}>
@@ -362,27 +385,59 @@ export default function InvestigationHub() {
                   </Typography>
 
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    {results.map((res: ResultItem, i: number) => (
+                    {results.map((res: ResultItem, i: number) => {
+                      const profileCount = res.parsed?.sites?.length ?? res.parsed?.urls?.length ?? 0;
+                      const isExpanded = expandedResult === i;
+                      return (
                       <Card key={i} sx={{ bgcolor: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.05)' }}>
                         <CardContent sx={{ p: '16px !important' }}>
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                               <CheckCircleIcon color="success" sx={{ fontSize: 16 }} />
                               <Typography variant="subtitle2" color="primary">{res.tool}</Typography>
+                              {profileCount > 0 && (
+                                <Chip label={`${profileCount} профілів`} size="small" sx={{ bgcolor: 'rgba(0,212,170,0.15)', color: 'primary.main', fontSize: '0.7rem' }} />
+                              )}
                             </Box>
-                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>{res.timestamp}</Typography>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              {profileCount > 0 && (
+                                <Button size="small" startIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />} sx={{ fontSize: '0.7rem', color: 'primary.main' }} onClick={() => setExpandedResult(isExpanded ? null : i)}>
+                                  {isExpanded ? 'Згорнути' : 'View Results'}
+                                </Button>
+                              )}
+                              <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.3)' }}>{res.timestamp}</Typography>
+                            </Box>
                           </Box>
-                          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace' }}>
-                            {res.data}
-                          </Typography>
-                          <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
+                          {isExpanded && profileCount > 0 && (
+                            <List dense sx={{ mb: 2, maxHeight: 200, overflow: 'auto' }}>
+                              {[
+                                ...(res.parsed?.sites || []),
+                                ...(res.parsed?.urls || []).map((u: string) => ({ site: 'URL', url: u }))
+                              ].map((item: { site?: string; url?: string }, j: number) => {
+                                const url = item.url;
+                                const site = item.site || 'Link';
+                                return url ? (
+                                  <ListItem key={j} sx={{ py: 0.5 }}>
+                                    <ListItemText primary={site} secondary={url} primaryTypographyProps={{ variant: 'caption', color: 'primary.main' }} secondaryTypographyProps={{ variant: 'caption', sx: { wordBreak: 'break-all' } }} />
+                                  </ListItem>
+                                ) : null;
+                              })}
+                            </List>
+                          )}
+                          {!isExpanded && (
+                            <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)', fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                              {res.data.length > 200 ? res.data.slice(0, 200) + '...' : res.data}
+                            </Typography>
+                          )}
+                          <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Button size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { navigator.clipboard?.writeText(res.data); setCopyStatus('Скопійовано'); setTimeout(() => setCopyStatus(null), 2000); }}>Raw JSON</Button>
+                            <Button size="small" startIcon={<GraphIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { window.location.href = '/graph'; }}>Open Graph</Button>
                             <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000); }}>AI Analysis</Button>
                             {copyStatus && <Typography variant="caption" sx={{ color: 'success.main', alignSelf: 'center', ml: 1 }}>{copyStatus}</Typography>}
                           </Box>
                         </CardContent>
                       </Card>
-                    ))}
+                    );})}
                     {investigationStatus === 'running' && (
                       <Box sx={{ mt: 2 }}>
                         <Typography variant="caption" sx={{ color: 'primary.main', mb: 1, display: 'block' }}>

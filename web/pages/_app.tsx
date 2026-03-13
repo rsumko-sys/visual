@@ -6,6 +6,7 @@ import Layout from '../components/Layout';
 import ApiErrorHandler from '../components/ApiErrorHandler';
 import AuthGuard from '../components/AuthGuard';
 import { AuthProvider } from '../context/auth';
+import { GraphEvidenceProvider } from '../context/graphEvidence';
 
 // Design system: 60-30-10, WCAG contrast, 8px baseline
 const theme = createTheme({
@@ -78,6 +79,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
       <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <GraphEvidenceProvider>
         <AuthGuard>
           {isLoginPage ? <Component {...pageProps} /> : (
             <Layout>
@@ -85,6 +87,7 @@ export default function App({ Component, pageProps, router }: AppProps) {
             </Layout>
           )}
         </AuthGuard>
+        </GraphEvidenceProvider>
         <ApiErrorHandler />
       </AuthProvider>
     </ThemeProvider>

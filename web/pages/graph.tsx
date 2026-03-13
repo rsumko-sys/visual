@@ -24,6 +24,7 @@ import Layout from '../components/Layout';
 import PolishedSlider from '../components/PolishedSlider';
 import { useDebounce } from '../hooks/useDebounce';
 import { useRouter } from 'next/router';
+import { useGraphEvidence } from '../context/graphEvidence';
 
 const MOCK_GRAPH = {
   nodes: [
@@ -106,13 +107,12 @@ function saveGraphSettings(s: GraphSettings) {
   } catch { /* ignore */ }
 }
 
-// Circle layout: Target at center, others around
-function getNodePositions(cx: number, cy: number, radius: number) {
+function getNodePositions(nodes: Array<{ data: { id: string } }>, cx: number, cy: number, radius: number) {
   const positions: Record<string, { x: number; y: number }> = {};
-  const others = MOCK_GRAPH.nodes.filter((n) => n.data.id !== 'Target');
+  const others = nodes.filter((n) => n.data.id !== 'Target');
   positions['Target'] = { x: cx, y: cy };
   others.forEach((n, i) => {
-    const angle = (2 * Math.PI * i) / others.length - Math.PI / 2;
+    const angle = (2 * Math.PI * i) / Math.max(1, others.length) - Math.PI / 2;
     positions[n.data.id] = {
       x: cx + radius * Math.cos(angle),
       y: cy + radius * Math.sin(angle),
@@ -123,6 +123,7 @@ function getNodePositions(cx: number, cy: number, radius: number) {
 
 export default function VisualGraphPage() {
   const router = useRouter();
+  const { nodes: evidenceNodes, edges: evidenceEdges } = useGraphEvidence();
   const [searchQuery, setSearchQuery] = useState('');
   const [graphSettings, setGraphSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [snackbar, setSnackbar] = useState('');
@@ -133,6 +134,16 @@ export default function VisualGraphPage() {
   const nodeScaleDeferred = useDeferredValue(nodeScale);
   const linkDistanceDebounced = useDebounce(linkDistance, 150);
 
+  const graphData = useMemo(() => {
+    if (evidenceNodes.length > 0) {
+      return {
+        nodes: evidenceNodes.map((n) => ({ data: { id: n.id, label: n.label, type: n.type, val: n.val ?? 15 } })),
+        edges: evidenceEdges.map((e) => ({ data: { source: e.source, target: e.target } })),
+      };
+    }
+    return MOCK_GRAPH;
+  }, [evidenceNodes, evidenceEdges]);
+
   useEffect(() => {
     setGraphSettings(loadGraphSettings());
   }, []);
@@ -142,12 +153,12 @@ export default function VisualGraphPage() {
   }, [graphSettings]);
 
   const selectedNode = useMemo(() =>
-    MOCK_GRAPH.nodes.find((n) => n.data.id === selectedNodeId) || MOCK_GRAPH.nodes[0],
-    [selectedNodeId]
+    graphData.nodes.find((n) => n.data.id === selectedNodeId) || graphData.nodes[0],
+    [selectedNodeId, graphData.nodes]
   );
 
   const radius = 180 + (linkDistanceDebounced - 50) * 0.5;
-  const positions = useMemo(() => getNodePositions(350, 350, radius), [radius]);
+  const positions = useMemo(() => getNodePositions(graphData.nodes, 350, 350, radius), [radius, graphData.nodes]);
 
   const handleExportImage = useCallback(() => {
     const svg = svgRef.current;
@@ -275,13 +286,13 @@ export default function VisualGraphPage() {
                 <defs>
                   <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="rgba(255,255,255,0.25)" /></marker>
                 </defs>
-                {MOCK_GRAPH.edges.map((e, i) => {
+                {graphData.edges.map((e, i) => {
                   const src = positions[e.data.source];
                   const tgt = positions[e.data.target];
                   if (!src || !tgt) return null;
                   return <line key={i} x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y} stroke="rgba(255,255,255,0.15)" strokeWidth={2} markerEnd="url(#arrow)" />;
                 })}
-                {MOCK_GRAPH.nodes.map((n) => {
+                {graphData.nodes.map((n) => {
                   const pos = positions[n.data.id];
                   if (!pos) return null;
                   const r = nodeR(n.data.val ?? 15);
@@ -299,8 +310,8 @@ export default function VisualGraphPage() {
 
             <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Nodes: {MOCK_GRAPH.nodes.length}</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Edges: {MOCK_GRAPH.edges.length}</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Nodes: {graphData.nodes.length}</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Edges: {graphData.edges.length}</Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Density: 0.28</Typography>
               </Box>
               <Typography variant="caption" sx={{ color: 'success.main', fontWeight: 600 }}>● Live Sync Active</Typography>

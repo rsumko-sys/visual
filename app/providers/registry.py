@@ -6,12 +6,15 @@ import logging
 from typing import Optional, Dict, Any
 
 from app.providers.shodan_provider import ShodanProvider
+from app.providers.maigret_provider import MaigretProvider
 
 logger = logging.getLogger(__name__)
 
 _PROVIDERS: Dict[str, Any] = {
     "shodan": ShodanProvider(),
     "shodan_iot": ShodanProvider(),  # той самий API
+    "maigret": MaigretProvider(),
+    "maigret_v3": MaigretProvider(),  # alias для каталогу
 }
 
 
