@@ -34,8 +34,8 @@ export function getApiBaseUrl(): string {
       if (isProductionDossier && (clean.includes('localhost') || clean.includes('127.0.0.1'))) {
         return PRODUCTION_API;
       }
-      // Порожній або невалідний URL — fallback на production
-      if (isProductionDossier && !isValidApiUrl(clean)) {
+      // Обрізаний URL (productic) або невалідний — fallback на production
+      if (isProductionDossier && (clean.includes('productic') || !isValidApiUrl(clean))) {
         return PRODUCTION_API;
       }
       if (isValidApiUrl(clean)) return clean;

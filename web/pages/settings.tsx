@@ -3,7 +3,9 @@ import { Box, Typography, TextField, Button, Paper, Switch, FormControlLabel, Sn
 import { Link as LinkIcon, VpnKey as KeyIcon } from '@mui/icons-material';
 import Layout from '../components/Layout';
 import { getApiBaseUrl } from '../lib/api';
-import api from '../lib/api';
+import api, { getApiBaseUrl } from '../lib/api';
+
+const PRODUCTION_API = 'https://robust-kindness-production.up.railway.app';
 import { useAuth } from '../context/auth';
 
 const SETTINGS_STORE_KEYS_KEY = 'minimax_settings_store_keys';
@@ -26,10 +28,18 @@ export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('http://localhost:8000');
   const [storeApiKeysLocally, setStoreApiKeysLocally] = useState(true);
   const [saved, setSaved] = useState(false);
+  const [isProduction, setIsProduction] = useState(false);
   const { token, login, logout } = useAuth();
 
   useEffect(() => {
-    setApiUrl(getApiBaseUrl());
+    const prod = typeof window !== 'undefined' && window.location.hostname?.includes('railway.app');
+    setIsProduction(!!prod);
+    let url = getApiBaseUrl();
+    // Виправлення обрізаного URL (напр. productic замість production.up.railway.app)
+    if (prod && (url.includes('productic') || !url.includes('.up.railway.app'))) {
+      url = PRODUCTION_API;
+    }
+    setApiUrl(url);
     try {
       const stored = localStorage.getItem(SETTINGS_STORE_KEYS_KEY);
       if (stored !== null) setStoreApiKeysLocally(stored === 'true');
@@ -87,10 +97,21 @@ export default function SettingsPage() {
               fullWidth
               size="small"
               label="URL API (наприклад: http://localhost:8000)"
+              placeholder={PRODUCTION_API}
               value={apiUrl}
               onChange={(e) => setApiUrl(e.target.value)}
               sx={{ mb: 2, ...inputSx }}
             />
+            {isProduction && (
+              <Button
+                variant="outlined"
+                size="small"
+                sx={{ mb: 2, display: 'block', borderColor: 'rgba(0,212,170,0.4)', color: 'primary.main' }}
+                onClick={() => setApiUrl(PRODUCTION_API)}
+              >
+                Використати production API
+              </Button>
+            )}
             <FormControlLabel
               control={
                 <Switch
