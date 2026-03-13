@@ -9,6 +9,7 @@
 *.db
 dump.rdb
 *.sqlite3
+schema_backup.sql
 
 # Python
 __pycache__/
