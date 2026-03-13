@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect, useDeferredValue } from 'react';
 import { 
   Box, Typography, Paper, IconButton, Tooltip, TextField, Button, Chip, InputAdornment,
   List, ListItem, ListItemText, ListItemIcon, Divider,
@@ -130,6 +130,7 @@ export default function VisualGraphPage() {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const { nodeScale, linkDistance, linkStrength, showLabels } = graphSettings;
+  const nodeScaleDeferred = useDeferredValue(nodeScale);
   const linkDistanceDebounced = useDebounce(linkDistance, 150);
 
   useEffect(() => {
@@ -155,16 +156,22 @@ export default function VisualGraphPage() {
       return;
     }
     try {
-      const svgData = new XMLSerializer().serializeToString(svg);
+      const scale = 2;
+      const w = 700 * scale;
+      const h = 700 * scale;
+      const svgClone = svg.cloneNode(true) as SVGSVGElement;
+      svgClone.setAttribute('width', String(w));
+      svgClone.setAttribute('height', String(h));
+      const svgData = new XMLSerializer().serializeToString(svgClone);
       const canvas = document.createElement('canvas');
-      canvas.width = 700;
-      canvas.height = 700;
+      canvas.width = w;
+      canvas.height = h;
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('No context');
+      ctx.fillStyle = '#0a0c10';
+      ctx.fillRect(0, 0, w, h);
       const img = new Image();
       img.onload = () => {
-        ctx.fillStyle = '#0a0c10';
-        ctx.fillRect(0, 0, 700, 700);
         ctx.drawImage(img, 0, 0);
         const a = document.createElement('a');
         a.href = canvas.toDataURL('image/png');
@@ -180,7 +187,7 @@ export default function VisualGraphPage() {
   }, []);
 
   const baseSize = 24;
-  const nodeR = (val: number) => Math.round((baseSize + (val - 10) * 1.5) * nodeScale);
+  const nodeR = (val: number) => Math.round((baseSize + (val - 10) * 1.5) * nodeScaleDeferred);
 
   return (
     <Layout>
@@ -253,8 +260,8 @@ export default function VisualGraphPage() {
           </Paper>
         </Box>
 
-        <Box sx={{ flex: 1, minWidth: 0, order: 2 }}>
-          <Paper data-graph-canvas sx={{ height: '700px', bgcolor: '#0a0c10', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
+        <Box sx={{ flex: 1, minWidth: 0, order: 2, overflow: 'hidden' }}>
+          <Paper data-graph-canvas sx={{ height: { xs: 400, sm: 550, md: 700 }, minHeight: 300, bgcolor: '#0a0c10', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
             <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 0.5, zIndex: 10, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', p: 0.25, borderRadius: 1.5, border: '1px solid rgba(255,255,255,0.08)' }}>
               <Tooltip title="Zoom In" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.min(3, s.nodeScale + 0.2) }))}><ZoomInIcon /></IconButton></Tooltip>
               <Tooltip title="Zoom Out" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.max(0.5, s.nodeScale - 0.2) }))}><ZoomOutIcon /></IconButton></Tooltip>
@@ -263,8 +270,8 @@ export default function VisualGraphPage() {
               <Tooltip title="Settings" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => router.push('/settings')}><SettingsIcon /></IconButton></Tooltip>
             </Box>
 
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <svg ref={svgRef} viewBox="0 0 700 700" width="100%" height="700" style={{ background: 'transparent' }}>
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateZ(0)', willChange: 'transform' }}>
+              <svg ref={svgRef} viewBox="0 0 700 700" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', maxHeight: '100%', background: 'transparent', objectFit: 'contain', transform: 'translateZ(0)' }}>
                 <defs>
                   <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="rgba(255,255,255,0.25)" /></marker>
                 </defs>
@@ -282,8 +289,8 @@ export default function VisualGraphPage() {
                   const color = nodeTypeColors[n.data.type] || '#666';
                   return (
                     <g key={n.data.id} onClick={() => setSelectedNodeId(n.data.id)} style={{ cursor: 'pointer' }}>
-                      <circle cx={pos.x} cy={pos.y} r={r} fill={color} stroke={isSelected ? '#fff' : 'transparent'} strokeWidth={isSelected ? 4 : 0} />
-                      {showLabels && <text x={pos.x} y={pos.y + r + 14} textAnchor="middle" fill="#fff" fontSize={12} style={{ textShadow: '0 1px 2px #222' }}>{n.data.label}</text>}
+                      <circle cx={pos.x} cy={pos.y} r={r} fill={color} stroke={isSelected ? '#00d4aa' : 'transparent'} strokeWidth={isSelected ? 4 : 0} />
+                      {showLabels && <text x={pos.x} y={pos.y + r + 16} textAnchor="middle" fill="#fff" fontSize={12} style={{ textShadow: '0 1px 2px #222', pointerEvents: 'none' }}>{n.data.label}</text>}
                     </g>
                   );
                 })}

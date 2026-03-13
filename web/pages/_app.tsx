@@ -4,6 +4,7 @@ import '../styles/print.css';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import Layout from '../components/Layout';
 import ApiErrorHandler from '../components/ApiErrorHandler';
+import AuthGuard from '../components/AuthGuard';
 import { AuthProvider } from '../context/auth';
 
 // Design system: 60-30-10, WCAG contrast, 8px baseline
@@ -65,7 +66,8 @@ const theme = createTheme({
   },
 });
 
-export default function App({ Component, pageProps }: AppProps) {
+export default function App({ Component, pageProps, router }: AppProps) {
+  const isLoginPage = router.route === '/login';
   return (
     <>
       <Head>
@@ -76,9 +78,13 @@ export default function App({ Component, pageProps }: AppProps) {
       <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <Layout>
-          <Component {...pageProps} />
-        </Layout>
+        <AuthGuard>
+          {isLoginPage ? <Component {...pageProps} /> : (
+            <Layout>
+              <Component {...pageProps} />
+            </Layout>
+          )}
+        </AuthGuard>
         <ApiErrorHandler />
       </AuthProvider>
     </ThemeProvider>
