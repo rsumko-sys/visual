@@ -112,11 +112,12 @@ function getNodePositions(nodes: Array<{ data: { id: string } }>, cx: number, cy
   const positions: Record<string, { x: number; y: number }> = {};
   const others = nodes.filter((n) => n.data.id !== 'Target');
   positions['Target'] = { x: cx, y: cy };
+  const r = Math.max(radius, 240 + others.length * 8);
   others.forEach((n, i) => {
     const angle = (2 * Math.PI * i) / Math.max(1, others.length) - Math.PI / 2;
     positions[n.data.id] = {
-      x: cx + radius * Math.cos(angle),
-      y: cy + radius * Math.sin(angle),
+      x: cx + r * Math.cos(angle),
+      y: cy + r * Math.sin(angle),
     };
   });
   return positions;
@@ -129,7 +130,12 @@ export default function VisualGraphPage() {
   const [graphSettings, setGraphSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [snackbar, setSnackbar] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('Target');
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [isPanning, setIsPanning] = useState(false);
+  const panStartRef = useRef({ clientX: 0, clientY: 0, panX: 0, panY: 0 });
   const svgRef = useRef<SVGSVGElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
   const { nodeScale, linkDistance, linkStrength, showLabels } = graphSettings;
   const nodeScaleDeferred = useDeferredValue(nodeScale);
@@ -158,7 +164,7 @@ export default function VisualGraphPage() {
     [selectedNodeId, graphData.nodes]
   );
 
-  const radius = 180 + (linkDistanceDebounced - 50) * 0.5;
+  const radius = 220 + (linkDistanceDebounced - 50) * 0.6;
   const positions = useMemo(() => getNodePositions(graphData.nodes, 350, 350, radius), [radius, graphData.nodes]);
 
   const handleExportImage = useCallback(() => {
@@ -201,6 +207,41 @@ export default function VisualGraphPage() {
   const baseSize = 24;
   const nodeR = (val: number) => Math.round((baseSize + (val - 10) * 1.5) * nodeScaleDeferred);
 
+  const handleWheel = useCallback((e: WheelEvent) => {
+    e.preventDefault();
+    const delta = e.deltaY > 0 ? -0.1 : 0.1;
+    setZoom((z) => Math.max(0.3, Math.min(3, z + delta)));
+  }, []);
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    if (e.button === 0) {
+      setIsPanning(true);
+      panStartRef.current = { clientX: e.clientX, clientY: e.clientY, panX: pan.x, panY: pan.y };
+    }
+  }, [pan]);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [handleWheel]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      const start = panStartRef.current;
+      const dx = e.clientX - start.clientX;
+      const dy = e.clientY - start.clientY;
+      setPan({ x: start.panX + dx, y: start.panY + dy });
+    };
+    const onUp = () => setIsPanning(false);
+    if (isPanning) {
+      window.addEventListener('mousemove', onMove);
+      window.addEventListener('mouseup', onUp);
+      return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
+    }
+  }, [isPanning]);
+
   return (
     <Layout>
       <ErrorBoundary>
@@ -214,7 +255,7 @@ export default function VisualGraphPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button type="button" variant="outlined" startIcon={<ResetIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => { clearEvidence(); setGraphSettings(DEFAULT_SETTINGS); setSelectedNodeId('Target'); setSnackbar('Граф скинуто'); }}>Reload</Button>
+          <Button type="button" variant="outlined" startIcon={<ResetIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => { clearEvidence(); setGraphSettings(DEFAULT_SETTINGS); setSelectedNodeId('Target'); setPan({ x: 0, y: 0 }); setZoom(1); setSnackbar('Граф скинуто'); }}>Reload</Button>
           <Button type="button" variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => { navigator.clipboard?.writeText(typeof window !== 'undefined' ? window.location.href : ''); setSnackbar('Посилання скопійовано'); }}>Share</Button>
           <Button type="button" variant="contained" startIcon={<DownloadIcon />} onClick={handleExportImage}>Export Image</Button>
           <Button type="button" variant="outlined" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => window.print()}>Print / PDF</Button>
@@ -279,13 +320,28 @@ export default function VisualGraphPage() {
             <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 0.5, zIndex: 10, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', p: 0.25, borderRadius: 1.5, border: '1px solid rgba(255,255,255,0.08)' }}>
               <Tooltip title="Zoom In" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.min(3, s.nodeScale + 0.2) }))}><ZoomInIcon /></IconButton></Tooltip>
               <Tooltip title="Zoom Out" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.max(0.5, s.nodeScale - 0.2) }))}><ZoomOutIcon /></IconButton></Tooltip>
-              <Tooltip title="Reset View" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: 1 }))}><ResetIcon /></IconButton></Tooltip>
+              <Tooltip title="Reset View" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => { setGraphSettings((s) => ({ ...s, nodeScale: 1 })); setPan({ x: 0, y: 0 }); setZoom(1); }}><ResetIcon /></IconButton></Tooltip>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
               <Tooltip title="Settings" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => router.push('/settings')}><SettingsIcon /></IconButton></Tooltip>
             </Box>
 
-            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', transform: 'translateZ(0)', willChange: 'transform' }}>
-              <svg ref={svgRef} viewBox="0 0 700 700" preserveAspectRatio="xMidYMid meet" style={{ width: '100%', height: '100%', maxHeight: '100%', background: 'transparent', objectFit: 'contain', transform: 'translateZ(0)' }}>
+            <Box
+              ref={containerRef}
+              sx={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                overflow: 'hidden',
+                cursor: isPanning ? 'grabbing' : 'grab',
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseUp={() => setIsPanning(false)}
+              onMouseLeave={() => setIsPanning(false)}
+            >
+              <Box sx={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: 'center center', transition: isPanning ? 'none' : 'transform 0.1s ease-out' }}>
+                <svg ref={svgRef} viewBox="0 0 700 700" preserveAspectRatio="xMidYMid meet" style={{ width: 700, height: 700, maxWidth: '100%', maxHeight: '100%', background: 'transparent', display: 'block' }}>
                 <defs>
                   <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="rgba(255,255,255,0.25)" /></marker>
                 </defs>
@@ -309,11 +365,13 @@ export default function VisualGraphPage() {
                   );
                 })}
               </svg>
+              </Box>
             </Box>
 
             <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Box sx={{ display: 'flex', gap: 2 }}>
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Nodes: {graphData.nodes.length}</Typography>
+                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.35)' }}>Перетягніть • Коліщатко для масштабу</Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Edges: {graphData.edges.length}</Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Density: 0.28</Typography>
               </Box>
