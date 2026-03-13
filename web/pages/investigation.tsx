@@ -22,6 +22,7 @@ import {
 } from '@mui/icons-material';
 import api from '../lib/api';
 import Layout from '../components/Layout';
+import { useRouter } from 'next/router';
 import { useAuth } from '../context/auth';
 import { useGraphEvidence } from '../context/graphEvidence';
 
@@ -47,6 +48,7 @@ interface ResultItem {
 }
 
 export default function InvestigationHub() {
+  const router = useRouter();
   const { token } = useAuth();
   const { addEvidenceFromMaigret } = useGraphEvidence();
   const [query, setQuery] = useState<string>('');
@@ -274,10 +276,16 @@ export default function InvestigationHub() {
               border: '1px solid rgba(0,212,170,0.2)',
               display: 'flex',
               alignItems: 'center',
+              justifyContent: 'space-between',
               gap: 1,
             }}>
-              <AddIcon color="primary" fontSize="small" />
-              <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600 }}>2. Chain OSINT Tools</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <AddIcon color="primary" fontSize="small" />
+                <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600 }}>2. Chain OSINT Tools</Typography>
+              </Box>
+              <Button type="button" size="small" variant="text" sx={{ color: 'primary.main', textTransform: 'none', minWidth: 'auto', py: 0 }} onClick={() => router.push('/tools')}>
+                Каталог →
+              </Button>
             </Box>
             
             <Box sx={{ mb: 3 }}>
@@ -285,6 +293,7 @@ export default function InvestigationHub() {
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {availableTools.map((tool: AvailableTool) => (
                   <Button
+                    type="button"
                     key={tool.id}
                     variant="outlined"
                     size="small"
@@ -376,11 +385,11 @@ export default function InvestigationHub() {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Investigation Pipeline</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Button size="small" variant="outlined" onClick={handleNewInvestigation} disabled={investigationStatus === 'running'} sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.3)' }}>
+                <Button type="button" size="small" variant="outlined" onClick={handleNewInvestigation} disabled={investigationStatus === 'running'} sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.3)' }}>
                   Reload
                 </Button>
                 {investigationStatus !== 'idle' && currentInvestigationId && (
-                  <Button size="small" variant="outlined" startIcon={<PdfIcon />} sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={handleExportPDF}>
+                  <Button type="button" size="small" variant="outlined" startIcon={<PdfIcon />} sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={handleExportPDF}>
                     Download PDF Report
                   </Button>
                 )}
@@ -431,7 +440,7 @@ export default function InvestigationHub() {
                             </Box>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                               {profileCount > 0 && (
-                                <Button size="small" startIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />} sx={{ fontSize: '0.7rem', color: 'primary.main' }} onClick={() => setExpandedResult(isExpanded ? null : i)}>
+                                <Button type="button" size="small" startIcon={isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />} sx={{ fontSize: '0.7rem', color: 'primary.main' }} onClick={() => setExpandedResult(isExpanded ? null : i)}>
                                   {isExpanded ? 'Згорнути' : 'View Results'}
                                 </Button>
                               )}
@@ -460,9 +469,9 @@ export default function InvestigationHub() {
                             </Typography>
                           )}
                           <Box sx={{ mt: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                            <Button size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { navigator.clipboard?.writeText(res.data); setCopyStatus('Скопійовано'); setTimeout(() => setCopyStatus(null), 2000); }}>Raw JSON</Button>
-                            <Button size="small" startIcon={<GraphIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { window.location.href = '/graph'; }}>Open Graph</Button>
-                            <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000); }}>AI Analysis</Button>
+                            <Button type="button" size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { navigator.clipboard?.writeText(res.data); setCopyStatus('Скопійовано'); setTimeout(() => setCopyStatus(null), 2000); }}>Raw JSON</Button>
+                            <Button type="button" size="small" startIcon={<GraphIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { window.location.href = '/graph'; }}>Open Graph</Button>
+                            <Button type="button" size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000); }}>AI Analysis</Button>
                             {copyStatus && <Typography variant="caption" sx={{ color: 'success.main', alignSelf: 'center', ml: 1 }}>{copyStatus}</Typography>}
                           </Box>
                         </CardContent>
@@ -483,11 +492,11 @@ export default function InvestigationHub() {
             
             {investigationStatus === 'completed' && (
               <Box sx={{ p: 2, bgcolor: 'rgba(76, 175, 80, 0.05)', borderTop: '1px solid rgba(76, 175, 80, 0.2)', display: 'flex', justifyContent: 'flex-end', gap: 2 }}>
-                <Button variant="outlined" color="success" size="small" onClick={handleExportSTIX} startIcon={<JsonIcon />}>
+                <Button type="button" variant="outlined" color="success" size="small" onClick={handleExportSTIX} startIcon={<JsonIcon />}>
                   Export STIX 2.1 (JSON)
                 </Button>
-                <Button variant="outlined" color="success" size="small" onClick={handleExportPDF}>Export Report (PDF)</Button>
-                <Button variant="contained" color="success" size="small" onClick={handleSaveToVault} disabled={saving}>
+                <Button type="button" variant="outlined" color="success" size="small" onClick={handleExportPDF}>Export Report (PDF)</Button>
+                <Button type="button" variant="contained" color="success" size="small" onClick={handleSaveToVault} disabled={saving}>
                   Save to Evidence Vault
                 </Button>
                 {saveStatus && <Typography variant="caption" sx={{ color: saveStatus.includes('Error') ? 'error.main' : 'success.main', ml: 2 }}>{saveStatus}</Typography>}

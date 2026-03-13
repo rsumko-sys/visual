@@ -214,10 +214,10 @@ export default function VisualGraphPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-          <Button variant="outlined" startIcon={<ResetIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => { clearEvidence(); setGraphSettings(DEFAULT_SETTINGS); setSelectedNodeId('Target'); setSnackbar('Граф скинуто'); }}>Reload</Button>
-          <Button variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => { navigator.clipboard?.writeText(typeof window !== 'undefined' ? window.location.href : ''); setSnackbar('Посилання скопійовано'); }}>Share</Button>
-          <Button variant="contained" startIcon={<DownloadIcon />} onClick={handleExportImage}>Export Image</Button>
-          <Button variant="outlined" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => window.print()}>Print / PDF</Button>
+          <Button type="button" variant="outlined" startIcon={<ResetIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.3)' }} onClick={() => { clearEvidence(); setGraphSettings(DEFAULT_SETTINGS); setSelectedNodeId('Target'); setSnackbar('Граф скинуто'); }}>Reload</Button>
+          <Button type="button" variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => { navigator.clipboard?.writeText(typeof window !== 'undefined' ? window.location.href : ''); setSnackbar('Посилання скопійовано'); }}>Share</Button>
+          <Button type="button" variant="contained" startIcon={<DownloadIcon />} onClick={handleExportImage}>Export Image</Button>
+          <Button type="button" variant="outlined" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => window.print()}>Print / PDF</Button>
         </Box>
       </Box>
 
@@ -270,7 +270,7 @@ export default function VisualGraphPage() {
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>First Seen: 2026-03-12</Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Last Update: Just now</Typography>
             </Box>
-            <Button fullWidth variant="outlined" size="small" sx={{ mt: 2, color: 'primary.main' }} onClick={() => router.push('/investigation')}>Deep Profile</Button>
+            <Button type="button" fullWidth variant="outlined" size="small" sx={{ mt: 2, color: 'primary.main' }} onClick={() => router.push('/investigation')}>Deep Profile</Button>
           </Paper>
         </Box>
 
