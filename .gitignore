@@ -36,3 +36,8 @@ build/
 *.log
 .coverage
 htmlcov/
+.pytest_cache/
+
+# Archives & temp
+*.zip
+*.tar.gz
