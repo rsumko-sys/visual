@@ -3,16 +3,19 @@ set -e
 
 echo "Starting Container..."
 
-# Clear Alembic cache
-rm -rf alembic/__pycache__ alembic/versions/__pycache__ 2>/dev/null || true
+# Clear ALL Alembic caches
+rm -rf alembic/__pycache__ alembic/versions/__pycache__ .pytest_cache 2>/dev/null || true
 
-# FORCE delete old DB to reset Alembic history completely
+# Force delete old DB
 rm -f osint.db osint.db-shm osint.db-wal 2>/dev/null || true
+
+# Clear Python bytecode
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
 echo "Running migrations..."
 
-# Run migrations on fresh DB
-alembic upgrade 99c58f04711c || true
+# Run migrations
+python -m alembic upgrade 99c58f04711c || true
 
 echo "Starting application..."
 
