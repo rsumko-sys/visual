@@ -16,7 +16,8 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
     if (isProtected && !token) {
       setRedirecting(true);
       const dest = encodeURIComponent(router.asPath);
-      router.replace(`/login?redirect=${dest}`);
+      // Миттєвий редирект замість повільного router.replace
+      window.location.href = `/login?redirect=${dest}`;
     }
   }, [isReady, token, router.pathname, router.asPath, router.route]);
 
