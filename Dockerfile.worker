@@ -1,0 +1,41 @@
+# Worker Dockerfile - copy at root for Railway (worker/Dockerfile path resolution)
+FROM python:3.11-slim AS builder
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY requirements-api.txt requirements-worker.txt ./
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir --user -r requirements-worker.txt
+
+FROM python:3.11-slim AS runtime
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq5 \
+    postgresql-client \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd -m -u 1000 osint && \
+    mkdir -p /reports && \
+    chown -R osint:osint /app /reports
+
+COPY --from=builder /root/.local /home/osint/.local
+ENV PATH=/home/osint/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+COPY --chown=osint:osint . .
+
+USER osint
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD pgrep -f "celery" || exit 1
+
+CMD ["celery", "-A", "app.tasks.celery_app", "worker", "--loglevel=info"]
