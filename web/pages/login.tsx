@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, Paper, Alert, Tabs, Tab } from '@mui/material';
-import { TravelExplore as OSINTIcon } from '@mui/icons-material';
+import { Box, Typography, TextField, Button, Paper, Alert, Tabs, Tab, Collapse } from '@mui/material';
+import { TravelExplore as OSINTIcon, Settings as SettingsIcon } from '@mui/icons-material';
 import { useRouter } from 'next/router';
-import api from '../lib/api';
+import api, { getApiBaseUrl } from '../lib/api';
 import { useAuth } from '../context/auth';
 
 export default function LoginPage() {
@@ -15,6 +15,8 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [apiUrl, setApiUrl] = useState('');
+  const [showApiUrl, setShowApiUrl] = useState(false);
 
   const redirect = (router.query.redirect as string) || '/';
 
@@ -22,6 +24,7 @@ export default function LoginPage() {
     if (isAuthenticated) {
       router.replace(redirect);
     }
+    setApiUrl(getApiBaseUrl());
   }, [isAuthenticated, redirect, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -42,7 +45,7 @@ export default function LoginPage() {
       const status = e && typeof e === 'object' && 'response' in e
         ? (e as { response?: { status?: number } }).response?.status
         : null;
-      setError(status === 401 ? 'Невірний логін або пароль' : 'Помилка входу');
+      setError(status === 401 ? 'Невірний логін або пароль' : status === 404 ? 'API недоступний (404). Перевірте URL в Налаштуваннях.' : 'Помилка входу');
     } finally {
       setLoading(false);
     }
@@ -59,10 +62,13 @@ export default function LoginPage() {
       setSuccess('Обліковий запис створено. Увійдіть.');
       setMode('login');
     } catch (e: unknown) {
-      const data = e && typeof e === 'object' && 'response' in e
-        ? (e as { response?: { data?: { detail?: string } } }).response?.data
-        : null;
-      setError(data?.detail || 'Помилка реєстрації');
+      const res = e && typeof e === 'object' && 'response' in e ? (e as { response?: { status?: number; data?: { detail?: string } } }).response : null;
+      const status = res?.status;
+      const detail = res?.data?.detail;
+      const msg = status === 404
+        ? 'API недоступний (404). Перевірте URL API в Налаштуваннях.'
+        : typeof detail === 'string' ? detail : detail || 'Помилка реєстрації';
+      setError(msg);
     } finally {
       setLoading(false);
     }
@@ -163,6 +169,25 @@ export default function LoginPage() {
             {error}
           </Alert>
         )}
+        <Box sx={{ mb: 2 }}>
+          <Button size="small" startIcon={<SettingsIcon />} onClick={() => setShowApiUrl(!showApiUrl)} sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            API URL
+          </Button>
+          <Collapse in={showApiUrl}>
+            <TextField
+              fullWidth
+              size="small"
+              label="URL API"
+              value={apiUrl}
+              onChange={(e) => {
+                setApiUrl(e.target.value);
+                if (typeof window !== 'undefined') localStorage.setItem('NEXT_PUBLIC_API_URL', e.target.value.replace(/\/$/, ''));
+              }}
+              placeholder="https://robust-kindness-production.up.railway.app"
+              sx={{ mt: 1, '& .MuiInputBase-root': { color: '#fff' }, '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' } }}
+            />
+          </Collapse>
+        </Box>
         {success && (
           <Alert severity="success" sx={{ mb: 2, bgcolor: 'rgba(34,197,94,0.1)' }}>
             {success}

@@ -1,11 +1,19 @@
 import os
 import sys
 from pydantic_settings import BaseSettings
-from pydantic import model_validator
+from pydantic import model_validator, field_validator
 
 class Settings(BaseSettings):
-    # Database (set in .env)
-    DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./osint.db")
+    # Database (set in .env). Fallback to SQLite if Railway ref not resolved.
+    DATABASE_URL: str = "sqlite:///./osint.db"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def resolve_database_url(cls, v: str | None) -> str:
+        url = v or os.getenv("DATABASE_URL") or "sqlite:///./osint.db"
+        if not url or "${{" in str(url) or str(url).strip() == "":
+            return "sqlite:///./osint.db"
+        return url
 
     # Redis (set in .env)
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
