@@ -73,7 +73,7 @@ export default function LoginPage() {
               MINIMAX <span style={{ color: '#00d4aa' }}>OSINT</span>
             </Typography>
             <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-              Увійдіть для доступу
+              Вимагається код доступу
             </Typography>
           </Box>
         </Box>
@@ -81,7 +81,8 @@ export default function LoginPage() {
         <TextField
           fullWidth
           type="password"
-          label="Пароль"
+          label="Код доступу"
+          placeholder="Введіть код..."
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
