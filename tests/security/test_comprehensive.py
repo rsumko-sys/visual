@@ -46,5 +46,5 @@ def test_vault_storage():
     }
     # Оскільки ми використовуємо Form, шлемо як data
     response = client.post("/vault/store", data=payload)
-    # Поверне 404 бо розслідування немає в базі, але ми перевіряємо логіку рутера
-    assert response.status_code in [200, 404]
+    # 404 — розслідування немає в базі; 403 — auth required; 200 — success
+    assert response.status_code in [200, 403, 404]

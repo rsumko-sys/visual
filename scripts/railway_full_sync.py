@@ -51,16 +51,23 @@ def main():
         "CELERY_RESULT_BACKEND": "${{Redis.REDIS_URL}}",
         "RAILWAY_HEALTHCHECK_TIMEOUT_SEC": "180",
     }
-    for sid, name in [(API_SERVICE_ID, "API"), (WORKER_SERVICE_ID, "Worker")]:
-        r = gql("""
-            mutation VariableUpsert($input: VariableCollectionUpsertInput!) {
-                variableCollectionUpsert(input: $input)
-            }
-        """, {"input": {"projectId": PROJECT_ID, "environmentId": ENV_ID, "serviceId": sid, "variables": vars_shared}})
-        if r.get("errors"):
-            print(f"   {name} vars FAIL:", r["errors"])
-        else:
-            print(f"   {name} vars OK")
+    vars_api = {**vars_shared, "ALLOWED_PASSWORDS": 'mJ9:fqQ?ptP3"jjT2)zoU4$qcC7<nn'}
+    r = gql("""
+        mutation VariableUpsert($input: VariableCollectionUpsertInput!) {
+            variableCollectionUpsert(input: $input)
+        }
+    """, {"input": {"projectId": PROJECT_ID, "environmentId": ENV_ID, "serviceId": API_SERVICE_ID, "variables": vars_api}})
+    if r.get("errors"):
+        print("   API vars FAIL:", r["errors"])
+    else:
+        print("   API vars OK (ALLOWED_PASSWORDS included)")
+    print("   API vars OK" if not r.get("errors") else f"   API vars FAIL: {r['errors']}")
+    r = gql("""
+        mutation VariableUpsert($input: VariableCollectionUpsertInput!) {
+            variableCollectionUpsert(input: $input)
+        }
+    """, {"input": {"projectId": PROJECT_ID, "environmentId": ENV_ID, "serviceId": WORKER_SERVICE_ID, "variables": vars_shared}})
+    print("   Worker vars OK" if not r.get("errors") else f"   Worker vars FAIL: {r['errors']}")
 
     print("\n==> 2. Dossier variables")
     r = gql("""

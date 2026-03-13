@@ -1,10 +1,11 @@
 """Pytest fixtures for OSINT Platform tests."""
+import os
 import pytest
 import requests
 import random
 import string
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 
 def _random_user():

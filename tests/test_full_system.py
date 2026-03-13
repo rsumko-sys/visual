@@ -1,10 +1,11 @@
-
+import os
+import pytest
 import requests
 import json
 import random
 import string
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 def random_user():
     suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
@@ -24,6 +25,7 @@ def get_token():
     assert r.status_code == 200
     return r.json()["access_token"]
 
+@pytest.mark.integration
 def test_tools_endpoints():
     r = requests.get(f"{API_URL}/tools/")
     assert r.status_code == 200
@@ -40,6 +42,7 @@ def test_tools_endpoints():
     assert r.status_code == 200
     print("Tool search OK")
 
+@pytest.mark.integration
 def test_vault_stix(token):  # noqa: F811 - token from conftest
     # Create investigation
     inv = requests.post(f"{API_URL}/investigations/", json={
@@ -66,6 +69,7 @@ def test_vault_stix(token):  # noqa: F811 - token from conftest
     assert stix["type"] == "bundle"
     print("STIX export OK")
 
+@pytest.mark.integration
 def test_reports_pdf(token):  # noqa: F811 - token from conftest
     # Create investigation
     inv = requests.post(f"{API_URL}/investigations/", json={
@@ -91,6 +95,7 @@ def test_reports_pdf(token):  # noqa: F811 - token from conftest
     assert r_pdf.status_code in (200, 500), f"PDF: {r_pdf.status_code}"
     print("Report generation OK")
 
+@pytest.mark.integration
 def test_task_status():
     # Use shodan (exists in catalog); maigret is maigret_v3
     r = requests.post(f"{API_URL}/tools/shodan/run", json={

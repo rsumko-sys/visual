@@ -18,7 +18,6 @@ import {
   ChevronLeft as ChevronLeftIcon,
   ChevronRight as ChevronRightIcon,
   NavigateNext as NavigateNextIcon,
-  Login as LoginIcon
 } from '@mui/icons-material';
 import { useRouter } from 'next/router';
 import GlobalSearch from './GlobalSearch';
@@ -80,7 +79,6 @@ export default function Layout({ children }: LayoutProps) {
   ];
 
   const secondaryItems = [
-    ...(!token ? [{ text: 'Увійти', icon: <LoginIcon />, path: '/login' }] : []),
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
     { text: 'Security', icon: <SecurityIcon />, path: '/security' },
   ];
@@ -194,39 +192,13 @@ export default function Layout({ children }: LayoutProps) {
       </List>
       
       <Box sx={{ p: sidebarCollapsed ? 1 : 2, bgcolor: 'rgba(255,255,255,0.02)', borderTop: '1px solid rgba(255,255,255,0.12)', display: 'flex', justifyContent: sidebarCollapsed ? 'center' : 'flex-start', alignItems: 'center' }}>
-        {token ? (
-          <>
-            <Badge color="success" variant="dot" overlap="circular">
-              <Avatar sx={{ width: 32, height: 32 }}>U</Avatar>
-            </Badge>
-            {!sidebarCollapsed && (
-              <Box sx={{ ml: 1.5 }}>
-                <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>Administrator</Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Online • API Secure</Typography>
-              </Box>
-            )}
-          </>
-        ) : (
-          <Box
-            component="button"
-            onClick={() => { router.push('/login'); setMobileOpen(false); }}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 1.5,
-              width: '100%',
-              border: 'none',
-              background: 'transparent',
-              cursor: 'pointer',
-              color: 'primary.main',
-              borderRadius: 2,
-              px: sidebarCollapsed ? 1 : 2,
-              py: 1,
-              '&:hover': { bgcolor: 'rgba(0,212,170,0.1)' },
-            }}
-          >
-            <LoginIcon sx={{ fontSize: 24 }} />
-            {!sidebarCollapsed && <Typography variant="body2" sx={{ fontWeight: 600 }}>Увійти</Typography>}
+        <Badge color="success" variant="dot" overlap="circular">
+          <Avatar sx={{ width: 32, height: 32 }}>U</Avatar>
+        </Badge>
+        {!sidebarCollapsed && (
+          <Box sx={{ ml: 1.5 }}>
+            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600 }}>Administrator</Typography>
+            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Online • Beta</Typography>
           </Box>
         )}
       </Box>

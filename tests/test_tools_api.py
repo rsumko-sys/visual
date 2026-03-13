@@ -1,7 +1,8 @@
+import os
 import pytest
 import requests
 
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 
 @pytest.mark.parametrize("tool_id", ["shodan", "maigret_v3"])

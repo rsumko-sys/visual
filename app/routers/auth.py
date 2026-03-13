@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request, Body
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
@@ -18,12 +18,6 @@ router = APIRouter()
 security = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-def _allowed_passwords_set() -> set[str]:
-    raw = (settings.ALLOWED_PASSWORDS or "").strip()
-    if not raw:
-        return set()
-    return {p.strip() for p in raw.replace(",", "\n").splitlines() if p.strip()}
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password[:72], hashed_password)
@@ -59,19 +53,9 @@ async def register(
     db.refresh(new_user)
     return new_user
 
-@router.post("/pass", response_model=Token, responses={401: {"description": "Invalid password"}})
-@limiter.limit("5/minute")
-async def login_by_password(
-    request: Request,
-    password: Annotated[str, Body(embed=True)],
-    db: Annotated[Session, Depends(get_db)]
-):
-    """Password-only login. ALLOWED_PASSWORDS in .env — один пароль на рядок."""
-    allowed = _allowed_passwords_set()
-    if not allowed:
-        raise HTTPException(status_code=503, detail="ALLOWED_PASSWORDS not configured")
-    if password not in allowed:
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+@router.get("/guest", response_model=Token)
+async def guest_token(db: Annotated[Session, Depends(get_db)]):
+    """Beta: токен без пароля. Для тестової версії."""
     user = db.query(User).filter(User.username == "system").first()
     if not user:
         user = User(username="system", email="system@local", hashed_password=get_password_hash("system"))
