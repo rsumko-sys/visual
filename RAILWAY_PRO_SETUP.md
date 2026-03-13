@@ -3,19 +3,20 @@
 ## Автоматично зроблено (через API)
 
 - [x] Домен API: **https://robust-kindness-production.up.railway.app**
-- [x] Змінні API: SECRET_KEY, DATABASE_URL (sqlite), REDIS_URL
+- [x] Змінні API: SECRET_KEY, DATABASE_URL (${{Postgres.DATABASE_URL}}), REDIS_URL (${{Redis.REDIS_URL}})
 - [x] Змінні dossier: NEXT_PUBLIC_API_URL
 - [x] Redeploy обох сервісів
 
 ## Чекліст (відмічай по ходу)
 
 - [x] 1. Згенерувати домен для API (robust-kindness)
-- [ ] 2. Додати Postgres (Database → PostgreSQL) — для продакшену
-- [ ] 3. Додати Redis (Database → Redis) — для Celery
-- [x] 4. Змінні API (SECRET_KEY, DATABASE_URL, REDIS_URL) — вже встановлено
-- [x] 5. NEXT_PUBLIC_API_URL в dossier — вже встановлено
+- [x] 2. Postgres — додано
+- [x] 3. Redis — додано (через `scripts/railway_complete_setup.py`)
+- [x] 4. Змінні API (SECRET_KEY, DATABASE_URL, REDIS_URL, CELERY_*) — оновлено
+- [x] 5. NEXT_PUBLIC_API_URL в dossier — встановлено
 - [x] 6. Redeploy dossier та API — виконано
-- [ ] 7. Зареєструвати користувача: `./scripts/register_admin.sh` або через UI
+- [ ] 7. Додати Worker (див. нижче)
+- [ ] 8. Зареєструвати користувача: `./scripts/register_admin.sh` або через UI
 
 ---
 
@@ -41,8 +42,8 @@
 ### 1.3 Postgres (Railway Pro)
 - **+ New** → **Database** → **PostgreSQL**
 - Підключи до проекту
-- Скопіюй `DATABASE_URL` з Variables нового сервісу
-- Додай у **robust-kindness** → Variables
+- **Важливо:** сервіс має називатися **Postgres** (для ref `${{Postgres.DATABASE_URL}}`)
+- Якщо інша назва — зміни змінну вручну в API
 
 ### 1.4 Redis (Railway Pro)
 - **+ New** → **Database** → **Redis**
@@ -65,7 +66,23 @@
 3. Логін, email, пароль → **Зареєструватися**
 4. Потім **Вхід** з цими даними
 
-## 4. Перевірка
+## 4. Worker (Celery)
+
+Для Maigret, Shodan та інших інструментів потрібен окремий Worker:
+
+1. Railway → **+ New** → **Empty Service**
+2. **Settings** → **Source** → Connect той самий GitHub repo
+3. **Settings** → **Build**:
+   - Root Directory: `.` (корінь)
+   - Dockerfile Path: `worker/Dockerfile`
+4. **Variables** — додати ті самі, що в API:
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}`
+   - `REDIS_URL` = `${{Redis.REDIS_URL}}`
+   - `CELERY_BROKER_URL` = `${{Redis.REDIS_URL}}`
+   - `CELERY_RESULT_BACKEND` = `${{Redis.REDIS_URL}}`
+   - `SECRET_KEY` = (той самий що в API)
+
+## 5. Перевірка
 
 - API health: https://robust-kindness-production.up.railway.app/health
 - Dossier: https://dossier-production-871b.up.railway.app
