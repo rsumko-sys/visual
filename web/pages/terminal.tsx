@@ -74,6 +74,7 @@ export default function TerminalPage() {
 
       <Box sx={{ mb: 2 }}>
         <Button
+          type="button"
           variant="contained"
           color="primary"
           startIcon={<PlayIcon />}

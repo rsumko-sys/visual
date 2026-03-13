@@ -1,8 +1,9 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
 import '../styles/print.css';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { Box, Typography, Button, CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import Layout from '../components/Layout';
+import ErrorBoundary from '../components/ErrorBoundary';
 import ApiErrorHandler from '../components/ApiErrorHandler';
 import AuthGuard from '../components/AuthGuard';
 import { AuthProvider } from '../context/auth';
@@ -86,7 +87,14 @@ export default function App({ Component, pageProps, router }: AppProps) {
         <AuthGuard>
           {isLoginPage ? <Component {...pageProps} /> : (
             <Layout>
-              <Component {...pageProps} />
+              <ErrorBoundary fallback={
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 2 }}>Помилка завантаження сторінки</Typography>
+                  <Button variant="outlined" color="primary" onClick={() => window.location.reload()}>Перезавантажити</Button>
+                </Box>
+              }>
+                <Component {...pageProps} />
+              </ErrorBoundary>
             </Layout>
           )}
         </AuthGuard>

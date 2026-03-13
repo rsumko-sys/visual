@@ -3,7 +3,8 @@ import {
   Box, Typography, Grid, Card, CardContent, TextField, 
   Button, Chip, Divider, List, ListItem, ListItemText,
   ListItemIcon, Paper, Stepper, Step, StepLabel, 
-  IconButton, Tooltip, LinearProgress, Avatar, Snackbar, Alert
+  IconButton, Tooltip, LinearProgress, Avatar, Snackbar, Alert,
+  Menu, MenuItem
 } from '@mui/material';
 import { 
   Search as SearchIcon, 
@@ -60,6 +61,7 @@ export default function InvestigationHub() {
   const [currentInvestigationId, setCurrentInvestigationId] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<string | null>(null);
   const [expandedResult, setExpandedResult] = useState<number | null>(null);
+  const [addToolAnchor, setAddToolAnchor] = useState<null | HTMLElement>(null);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -75,6 +77,9 @@ export default function InvestigationHub() {
   ];
 
   const handleAddTool = (tool: AvailableTool) => {
+    // #region agent log
+    if (typeof fetch !== 'undefined') fetch('http://127.0.0.1:7537/ingest/962fe773-a5ea-4fe0-acc1-b47d07c341c9',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'b2f0f0'},body:JSON.stringify({sessionId:'b2f0f0',location:'investigation.tsx:handleAddTool',message:'add tool',data:{toolId:tool.id,toolName:tool.name,alreadySelected:!!selectedTools.find((t: SelectedTool) => t.id === tool.id)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!selectedTools.find((t: SelectedTool) => t.id === tool.id)) {
       setSelectedTools([...selectedTools, { ...tool, status: 'pending' }]);
     }
@@ -176,15 +181,20 @@ export default function InvestigationHub() {
             tool.status = 'completed';
             const resData = statusRes.data.result?.data;
             const dataStr = JSON.stringify(resData, null, 2);
-            const parsed = resData && typeof resData === 'object' ? (() => {
-              const sites = resData.sites || resData.profiles || [];
-              const urls = resData.urls || [];
-              const siteList = Array.isArray(sites) ? sites : Object.entries(sites).map(([site, info]: [string, unknown]) => ({
-                site,
-                url: typeof info === 'object' && info && 'url' in (info as object) ? String((info as { url?: string }).url || '') : ''
-              }));
-              return { sites: siteList, urls, found: resData.found };
-            })() : undefined;
+            let parsed: ResultItem['parsed'] | undefined;
+            try {
+              parsed = resData && typeof resData === 'object' ? (() => {
+                const sites = resData.sites || resData.profiles || [];
+                const urls = resData.urls || [];
+                const siteList = Array.isArray(sites) ? sites : Object.entries(sites).map(([site, info]: [string, unknown]) => ({
+                  site,
+                  url: typeof info === 'object' && info && 'url' in (info as object) ? String((info as { url?: string }).url || '') : ''
+                }));
+                return { sites: siteList, urls, found: resData.found };
+              })() : undefined;
+            } catch (_) {
+              parsed = undefined;
+            }
             if (parsed?.sites?.length && (tool.id === 'maigret' || tool.id === 'maigret_v3')) {
               addEvidenceFromMaigret(query, parsed.sites.filter((s: { url?: string }) => s.url) as Array<{ site: string; url: string }>);
             }
@@ -244,8 +254,8 @@ export default function InvestigationHub() {
         </Typography>
       </Box>
 
-      <Grid container spacing={3} sx={{ alignItems: 'flex-start', overflow: 'hidden' }}>
-        <Grid item xs={12} md={4} sx={{ minWidth: 0, position: 'relative', zIndex: 10, pointerEvents: 'auto' }}>
+      <Grid container spacing={3} sx={{ alignItems: 'flex-start', overflow: 'hidden', isolation: 'isolate' }}>
+        <Grid item xs={12} md={4} sx={{ minWidth: 0, position: 'relative', pointerEvents: 'auto' }}>
           <Paper elevation={0} sx={{ p: 3, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, minWidth: 280, overflow: 'hidden' }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
               <AgentIcon color="primary" fontSize="small" /> 1. Set Target Query
@@ -280,13 +290,22 @@ export default function InvestigationHub() {
               gap: 1,
             }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <AddIcon color="primary" fontSize="small" />
+                <IconButton type="button" size="small" onClick={(e) => setAddToolAnchor(e.currentTarget)} sx={{ color: 'primary.main', p: 0.5 }} aria-label="Додати інструмент">
+                  <AddIcon color="primary" fontSize="small" />
+                </IconButton>
                 <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600 }}>2. Chain OSINT Tools</Typography>
               </Box>
               <Button type="button" size="small" variant="text" sx={{ color: 'primary.main', textTransform: 'none', minWidth: 'auto', py: 0 }} onClick={() => router.push('/tools')}>
                 Каталог →
               </Button>
             </Box>
+            <Menu anchorEl={addToolAnchor} open={!!addToolAnchor} onClose={() => setAddToolAnchor(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }} transformOrigin={{ vertical: 'top', horizontal: 'left' }}>
+              {availableTools.map((tool) => (
+                <MenuItem key={tool.id} onClick={() => { handleAddTool(tool); setAddToolAnchor(null); }}>
+                  {tool.name} ({tool.category})
+                </MenuItem>
+              ))}
+            </Menu>
             
             <Box sx={{ mb: 3 }}>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 1, display: 'block' }}>Suggested Tools</Typography>
@@ -377,7 +396,7 @@ export default function InvestigationHub() {
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={8} sx={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }}>
+        <Grid item xs={12} md={8} sx={{ position: 'relative', pointerEvents: 'auto', minWidth: 0 }}>
           <Paper elevation={0} sx={{ p: 0, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', minHeight: '600px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
             <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
