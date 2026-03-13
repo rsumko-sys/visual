@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Body
+from typing import Optional
 from app.data.tools_catalog import TOOLS_CATALOG, ALL_TOOLS_LIST, TOTAL_TOOLS
-from app.schemas import ToolsCatalogResponse, ToolInfo
+from app.schemas import ToolsCatalogResponse, ToolInfo, ToolRequest
 from app.tasks import run_osint_tool, celery_app
 from celery.result import AsyncResult
 import logging
@@ -55,6 +56,29 @@ async def get_statistics():
     
     return stats
 
+@router.get("/status/{task_id}")
+async def get_task_status(task_id: str):
+    """Отримати актуальний статус виконання задачі з Celery"""
+    if task_id.startswith("mock_task_"):
+        return {
+            "task_id": task_id,
+            "status": "completed",
+            "ready": True,
+            "result": {"data": {"found": True, "indicators": ["mock_01", "mock_02"], "raw_log": "Simulated result (no Redis)"}}
+        }
+
+    task_result = AsyncResult(task_id, app=celery_app)
+    result = None
+    if task_result.ready():
+        result = task_result.result
+
+    return {
+        "task_id": task_id,
+        "status": task_result.status.lower(),
+        "ready": task_result.ready(),
+        "result": result
+    }
+
 @router.get("/{tool_id}", response_model=ToolInfo)
 async def get_tool_detail(tool_id: str):
     """Отримати детальну інформацію про інструмент"""
@@ -64,7 +88,13 @@ async def get_tool_detail(tool_id: str):
     raise HTTPException(status_code=404, detail=f"Інструмент з ID '{tool_id}' не знайдений")
 
 @router.post("/{tool_id}/run")
-async def run_tool(tool_id: str, query: str = "", investigation_id: str = None, api_key: str = None):
+async def run_tool(
+    tool_id: str,
+    body: Optional[ToolRequest] = Body(None),
+    query: str = "",
+    investigation_id: str = None,
+    api_key: str = None
+):
     """Запустити інструмент (через Celery асинхронно)"""
     tool = None
     for t in ALL_TOOLS_LIST:
@@ -74,10 +104,16 @@ async def run_tool(tool_id: str, query: str = "", investigation_id: str = None, 
     
     if not tool:
         raise HTTPException(status_code=404, detail=f"Інструмент '{tool_id}' не знайдений")
-    
+
+    # Підтримка JSON body (frontend) та query params
+    if body:
+        query = body.query or query
+        investigation_id = body.investigation_id or investigation_id
+        api_key = body.api_key or api_key
+
     # Відправка задачі в чергу Celery
     try:
-        task = run_osint_tool.delay(tool_id, query, investigation_id, api_key)
+        task = run_osint_tool.delay(tool_id, query or "", investigation_id, api_key)
         task_id = task.id
         status = "queued"
     except Exception as e:
@@ -94,28 +130,4 @@ async def run_tool(tool_id: str, query: str = "", investigation_id: str = None, 
         "tool_name": tool["name"],
         "status": status,
         "query": query
-    }
-
-@router.get("/status/{task_id}")
-async def get_task_status(task_id: str):
-    """Отримати актуальний статус виконання задачі з Celery"""
-    if task_id.startswith("mock_task_"):
-        return {
-            "task_id": task_id,
-            "status": "completed",
-            "ready": True,
-            "result": {"data": {"found": True, "mock": True}}
-        }
-
-    task_result = AsyncResult(task_id, app=celery_app)
-    
-    result = None
-    if task_result.ready():
-        result = task_result.result
-
-    return {
-        "task_id": task_id,
-        "status": task_result.status.lower(),
-        "ready": task_result.ready(),
-        "result": result
     }

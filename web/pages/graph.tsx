@@ -4,7 +4,7 @@ import {
   Box, Typography, Paper, Grid, Card, CardContent, 
   IconButton, Tooltip, TextField, Button, Chip,
   List, ListItem, ListItemText, ListItemIcon, Divider,
-  Slider, FormControlLabel, Switch, Avatar
+  Slider, FormControlLabel, Switch, Avatar, Snackbar, Alert
 } from '@mui/material';
 import { 
   AccountTree as GraphIcon,
@@ -23,6 +23,7 @@ import {
   AttachMoney as CryptoIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
+import { useRouter } from 'next/router';
 
 // Graph Data for Demonstration
 const MOCK_GRAPH = {
@@ -69,8 +70,10 @@ const nodeTypeIcons: { [key: string]: any } = {
 const CytoscapeComponent = dynamic(() => import('react-cytoscapejs'), { ssr: false });
 
 export default function VisualGraphPage() {
+  const router = useRouter();
   const [searchQuery, setSearchQuery] = useState('');
   const [showLabels, setShowLabels] = useState(true);
+  const [snackbar, setSnackbar] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('Target');
   const [graphZoom, setGraphZoom] = useState(1);
   const cyRef = useRef<any>(null);
@@ -112,8 +115,8 @@ export default function VisualGraphPage() {
           </Typography>
         </Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }}>Share</Button>
-          <Button variant="contained" startIcon={<DownloadIcon />}>Export Image</Button>
+          <Button variant="outlined" startIcon={<ShareIcon />} sx={{ color: '#fff', borderColor: 'rgba(255,255,255,0.1)' }} onClick={() => { navigator.clipboard?.writeText(typeof window !== 'undefined' ? window.location.href : ''); setSnackbar('Посилання скопійовано'); }}>Share</Button>
+          <Button variant="contained" startIcon={<DownloadIcon />} onClick={() => window.print()}>Export Image</Button>
         </Box>
       </Box>
 
@@ -191,7 +194,7 @@ export default function VisualGraphPage() {
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>First Seen: 2026-03-12</Typography>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)' }}>Last Update: Just now</Typography>
             </Box>
-            <Button fullWidth variant="outlined" size="small" sx={{ mt: 2, color: 'primary.main' }}>Deep Profile</Button>
+            <Button fullWidth variant="outlined" size="small" sx={{ mt: 2, color: 'primary.main' }} onClick={() => router.push('/investigation')}>Deep Profile</Button>
           </Paper>
         </Grid>
 
@@ -232,8 +235,8 @@ export default function VisualGraphPage() {
                 <IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphZoom(1)}><ResetIcon /></IconButton>
               </Tooltip>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-              <Tooltip title="Auto Layout" placement="left">
-                <IconButton size="small" sx={{ color: '#fff' }}><SettingsIcon /></IconButton>
+              <Tooltip title="Settings" placement="left">
+                <IconButton size="small" sx={{ color: '#fff' }} onClick={() => router.push('/settings')}><SettingsIcon /></IconButton>
               </Tooltip>
             </Box>
 
@@ -314,6 +317,9 @@ export default function VisualGraphPage() {
           </Paper>
         </Grid>
       </Grid>
+      <Snackbar open={!!snackbar} autoHideDuration={2000} onClose={() => setSnackbar('')}>
+        <Alert severity="success">{snackbar}</Alert>
+      </Snackbar>
     </Layout>
   );
 }

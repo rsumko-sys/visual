@@ -16,10 +16,8 @@ import {
   Science as LabIcon,
   DataObject as JsonIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../lib/api';
 import Layout from '../components/Layout';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface SelectedTool {
   id: string;
@@ -49,6 +47,7 @@ export default function InvestigationHub() {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const [currentInvestigationId, setCurrentInvestigationId] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState<string | null>(null);
 
   useEffect(() => {
     // Ініціалізація унікального ID для сесії розслідування
@@ -81,9 +80,10 @@ export default function InvestigationHub() {
     setSaveStatus(null);
     try {
       for (const res of results) {
-        await axios.post(`${API_URL}/reports/${currentInvestigationId}/evidence`, {
+        await api.post(`/reports/${currentInvestigationId}/evidence`, {
           source: res.tool,
           data: res.data,
+          target: query,
         });
       }
       setSaveStatus('Saved to Evidence Vault');
@@ -97,7 +97,7 @@ export default function InvestigationHub() {
   const handleExportPDF = async () => {
     if (!currentInvestigationId) return;
     try {
-      const response = await axios.post(`${API_URL}/reports/${currentInvestigationId}/generate-report?format=pdf`, {}, { responseType: 'blob' });
+      const response = await api.post(`/reports/${currentInvestigationId}/generate-report?format=pdf`, {}, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const a = document.createElement('a');
       a.href = url;
@@ -121,7 +121,7 @@ export default function InvestigationHub() {
       setSelectedTools([...currentTools]);
       try {
         // 1. Запуск задачі на бекенді
-        const response = await axios.post(`${API_URL}/tools/${tool.id}/run`, {
+        const response = await api.post(`/tools/${tool.id}/run`, {
           query: query,
           investigation_id: currentInvestigationId,
           api_key: localStorage.getItem(`api_key_${tool.id}`) || ''
@@ -131,7 +131,7 @@ export default function InvestigationHub() {
         let ready = false;
         let attempts = 0;
         while (!ready && attempts < 30) {
-          const statusRes = await axios.get(`${API_URL}/tools/status/${taskId}`);
+          const statusRes = await api.get(`/tools/status/${taskId}`);
           if (statusRes.data.ready) {
             ready = true;
             tool.status = 'completed';
@@ -142,9 +142,10 @@ export default function InvestigationHub() {
             }]);
             // Save result to Evidence Vault immediately
             try {
-              await axios.post(`${API_URL}/reports/${currentInvestigationId}/evidence`, {
+              await api.post(`/reports/${currentInvestigationId}/evidence`, {
                 source: tool.name,
                 data: JSON.stringify(statusRes.data.result.data, null, 2),
+                target: query,
               });
             } catch (e) {
               // Ignore evidence save error for now
@@ -167,7 +168,7 @@ export default function InvestigationHub() {
   const handleExportSTIX = async () => {
     if (!currentInvestigationId) return;
     try {
-      const response = await axios.get(`${API_URL}/vault/${currentInvestigationId}/export/stix`);
+      const response = await api.get(`/vault/${currentInvestigationId}/export/stix`);
       const blob = new Blob([JSON.stringify(response.data, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -326,8 +327,9 @@ export default function InvestigationHub() {
                             {res.data}
                           </Typography>
                           <Box sx={{ mt: 2, display: 'flex', gap: 1 }}>
-                            <Button size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>Raw JSON</Button>
-                            <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }}>AI Analysis</Button>
+                            <Button size="small" startIcon={<JsonIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => { navigator.clipboard?.writeText(res.data); setCopyStatus('Скопійовано'); setTimeout(() => setCopyStatus(null), 2000); }}>Raw JSON</Button>
+                            <Button size="small" startIcon={<AgentIcon />} sx={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.5)' }} onClick={() => setCopyStatus('AI Analysis — в розробці'); setTimeout(() => setCopyStatus(null), 2000)}>AI Analysis</Button>
+                            {copyStatus && <Typography variant="caption" sx={{ color: 'success.main', alignSelf: 'center', ml: 1 }}>{copyStatus}</Typography>}
                           </Box>
                         </CardContent>
                       </Card>

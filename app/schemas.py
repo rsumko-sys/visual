@@ -49,7 +49,9 @@ class EvidenceResponse(BaseModel):
         from_attributes = True
 
 class ToolRequest(BaseModel):
-    query: str
+    query: str = ""
+    investigation_id: Optional[str] = None
+    api_key: Optional[str] = None
     options: Optional[dict] = {}
 
 class TaskResponse(BaseModel):

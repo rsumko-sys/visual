@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Header
 from typing import Annotated
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Investigation, Evidence
+from app.models import Investigation, Evidence, User
 from app.reporting import (
     ReportGenerator, ReportFormat
 )
@@ -57,6 +57,34 @@ async def add_evidence(
     authorization: Annotated[str | None, Header()] = None
 ):
     """Додати доказ до Evidence Vault з хешуванням для ланцюжка довіри"""
+    # Auto-create Investigation якщо не існує (для frontend-generated inv_xxx ids)
+    inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
+    if not inv:
+        # Ensure system user exists for owner_id FK
+        from passlib.context import CryptContext
+        pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        system_user = db.query(User).filter(User.username == "system").first()
+        if not system_user:
+            system_user = User(
+                id="system",
+                username="system",
+                email="system@osint.local",
+                hashed_password=pwd.hash("system_no_login")
+            )
+            db.add(system_user)
+            db.commit()
+        target = evidence.get("target") or evidence.get("query") or evidence.get("source", "unknown")
+        inv = Investigation(
+            id=investigation_id,
+            owner_id=system_user.id,
+            title=f"Investigation: {str(target)[:40]}..." if len(str(target)) > 40 else f"Investigation: {target}",
+            description="Auto-created from Evidence Vault",
+            target_identifier=target,
+            status="completed"
+        )
+        db.add(inv)
+        db.commit()
+
     evidence_hash = hashlib.sha256(json.dumps(evidence, sort_keys=True).encode()).hexdigest()
     new_evidence = Evidence(
         investigation_id=investigation_id,
@@ -94,6 +122,24 @@ async def get_evidence(
         })
     return {"evidence": result, "count": len(result)}
 
+def _extract_tool_result(evidence: Evidence) -> dict:
+    """Витягти результат інструменту з evidence (підтримка обох форматів: frontend wrapper та Celery direct)"""
+    try:
+        parsed = json.loads(evidence.data) if isinstance(evidence.data, str) else evidence.data
+    except Exception:
+        return {"raw": str(evidence.data)[:500]}
+    # Frontend add_evidence зберігає { source, data, target }
+    if isinstance(parsed, dict) and "source" in parsed and "data" in parsed:
+        inner = parsed["data"]
+        if isinstance(inner, str):
+            try:
+                return json.loads(inner)
+            except Exception:
+                return {"raw": inner[:500]}
+        return inner
+    return parsed
+
+
 # --- PDF Report Generation (already present, ensure logic is robust) ---
 @router.post("/{investigation_id}/generate-report")
 async def generate_investigation_report(
@@ -112,28 +158,54 @@ async def generate_investigation_report(
     evidence_list = db.query(Evidence).filter(
         Evidence.investigation_id == investigation_id
     ).all()
+
+    target = investigation.target_identifier or "Невідомий об'єкт"
+    tools_used = list(set(e.source for e in evidence_list if e.source))
+    findings_parts = []
+    if tools_used:
+        findings_parts.append(f"Використано інструменти: {', '.join(tools_used)}")
+    findings_parts.append(f"Зібрано доказів: {len(evidence_list)}")
+    findings = ". ".join(findings_parts) if findings_parts else "OSINT дослідження"
+
     report = ReportGenerator(investigation_id)
     report.add_executive_summary(
-        target=investigation.target_identifier,
-        findings=investigation.description or "OSINT дослідження",
+        target=target,
+        findings=findings,
         risk_level="UNKNOWN"
     )
-    # Додати докази до звіту (з хешуванням)
+
+    # Групувати докази за типом інструменту (case-insensitive)
+    by_source: dict[str, list] = {}
     evidence_data = []
     for evidence in evidence_list:
-        try:
-            data = json.loads(evidence.data) if isinstance(evidence.data, str) else evidence.data
-        except:
-            data = {"raw": evidence.data}
-        evidence_data.append(data)
-        # Автоматичний розподіл за категоріями в звіті
-        if evidence.source in ["maigret", "sherlock"]:
-            report.add_osint_search_results(investigation.target_identifier, [data])
-        elif evidence.source in ["shodan", "censys"]:
-            report.add_network_intelligence([data])
-        elif evidence.source in ["geospy", "google_earth"]:
-            report.add_geolocation_data([data])
-    # Додати секцію доказів з хешами
+        tool_result = _extract_tool_result(evidence)
+        evidence_data.append(tool_result)
+        src_lower = (evidence.source or "unknown").lower()
+        if src_lower not in by_source:
+            by_source[src_lower] = []
+        by_source[src_lower].append(tool_result)
+
+    def _collect_by_pattern(*patterns: str) -> list:
+        out = []
+        for key in by_source:
+            if any(p in key for p in patterns):
+                out.extend(by_source[key])
+        return out
+
+    # Додати секції за категоріями (без дублікатів)
+    osint_results = _collect_by_pattern("maigret", "sherlock", "whatsmyname")
+    if osint_results:
+        report.add_osint_search_results(target, osint_results)
+    net_results = _collect_by_pattern("shodan", "censys", "fofa", "nmap")
+    if net_results:
+        report.add_network_intelligence(net_results)
+    geo_sources = [k for k in by_source if "geospy" in k or "google" in k or "earth" in k or "picarta" in k]
+    if geo_sources:
+        results = []
+        for k in geo_sources:
+            results.extend(by_source[k])
+        report.add_geolocation_data(results)
+    # Секція доказів з хешами
     if evidence_data:
         report.add_evidence(evidence_data)
     # Генерація виводу

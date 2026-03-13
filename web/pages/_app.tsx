@@ -1,6 +1,7 @@
 import type { AppProps } from 'next/app';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import Layout from '../components/Layout';
+import ApiErrorHandler from '../components/ApiErrorHandler';
 
 const theme = createTheme({
   palette: {
@@ -20,6 +21,7 @@ export default function App({ Component, pageProps }: AppProps) {
       <Layout>
         <Component {...pageProps} />
       </Layout>
+      <ApiErrorHandler />
     </ThemeProvider>
   );
 }

@@ -16,8 +16,8 @@ class Settings(BaseSettings):
 
     # API Keys (external services, set in .env)
     SHODAN_KEY: str = os.getenv("SHODAN_KEY") or os.getenv("SHODAN_API_KEY") or ""
-    CENSYS_ID: str = os.getenv("CENSYS_ID") or ""
-    CENSYS_SECRET: str = os.getenv("CENSYS_SECRET") or ""
+    CENSYS_ID: str = os.getenv("CENSYS_ID") or os.getenv("CENSYS_API_ID") or ""
+    CENSYS_SECRET: str = os.getenv("CENSYS_SECRET") or os.getenv("CENSYS_API_SECRET") or ""
     VIRUSTOTAL_KEY: str = os.getenv("VIRUSTOTAL_KEY") or ""
     HUNTER_IO_KEY: str = os.getenv("HUNTER_IO_KEY") or ""
 

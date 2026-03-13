@@ -18,7 +18,6 @@ import {
   History as HistoryIcon,
   AccountTree as GraphIcon
 } from '@mui/icons-material';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
 
 const drawerWidth = 260;
@@ -52,7 +51,13 @@ export default function Layout({ children }: LayoutProps) {
 
   const drawer = (
     <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: '#0a0c10', color: '#fff' }}>
-      <Box sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
+      <Box
+        sx={{ p: 3, display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer' }}
+        onClick={() => router.push('/')}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => e.key === 'Enter' && router.push('/')}
+      >
         <Avatar sx={{ bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
           <OSINTIcon />
         </Avatar>
@@ -67,26 +72,29 @@ export default function Layout({ children }: LayoutProps) {
         {menuItems.map((item) => {
           const isActive = router.pathname === item.path;
           return (
-            <Link href={item.path} key={item.text} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <ListItem 
-                button 
-                sx={{ 
-                  borderRadius: 2,
-                  mb: 1,
-                  bgcolor: isActive ? 'rgba(33, 150, 243, 0.15)' : 'transparent',
-                  color: isActive ? theme.palette.primary.main : 'rgba(255,255,255,0.7)',
-                  '&:hover': {
-                    bgcolor: 'rgba(255,255,255,0.05)',
-                    color: '#fff'
-                  }
-                }}
-              >
-                <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText primary={item.text} primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400 }} />
-              </ListItem>
-            </Link>
+            <ListItem
+              key={item.text}
+              button
+              component="div"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && router.push(item.path)}
+              onClick={() => router.push(item.path)}
+              sx={{
+                borderRadius: 2,
+                mb: 1,
+                bgcolor: isActive ? 'rgba(33, 150, 243, 0.15)' : 'transparent',
+                color: isActive ? theme.palette.primary.main : 'rgba(255,255,255,0.7)',
+                cursor: 'pointer',
+                '&:hover': {
+                  bgcolor: isActive ? 'rgba(33, 150, 243, 0.15)' : 'rgba(255,255,255,0.05)',
+                  color: isActive ? theme.palette.primary.main : '#fff'
+                }
+              }}
+            >
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>{item.icon}</ListItemIcon>
+              <ListItemText primary={item.text} primaryTypographyProps={{ variant: 'body2', fontWeight: isActive ? 600 : 400 }} />
+            </ListItem>
           );
         })}
       </List>
@@ -94,24 +102,30 @@ export default function Layout({ children }: LayoutProps) {
       <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
 
       <List sx={{ px: 2, py: 2 }}>
-        {secondaryItems.map((item) => (
-          <Link href={item.path} key={item.text} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <ListItem 
-              button 
-              sx={{ 
+        {secondaryItems.map((item) => {
+          const isActive = router.pathname === item.path;
+          return (
+            <ListItem
+              key={item.text}
+              button
+              component="div"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => e.key === 'Enter' && router.push(item.path)}
+              onClick={() => router.push(item.path)}
+              sx={{
                 borderRadius: 2,
                 mb: 0.5,
-                color: 'rgba(255,255,255,0.5)',
+                color: isActive ? theme.palette.primary.main : 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
                 '&:hover': { bgcolor: 'rgba(255,255,255,0.05)', color: '#fff' }
               }}
             >
-              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>
-                {item.icon}
-              </ListItemIcon>
+              <ListItemIcon sx={{ color: 'inherit', minWidth: 40 }}>{item.icon}</ListItemIcon>
               <ListItemText primary={item.text} primaryTypographyProps={{ variant: 'body2' }} />
             </ListItem>
-          </Link>
-        ))}
+          );
+        })}
       </List>
       
       <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
@@ -160,14 +174,14 @@ export default function Layout({ children }: LayoutProps) {
 
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
             <Tooltip title="Notifications">
-              <IconButton color="inherit" size="small">
+              <IconButton color="inherit" size="small" onClick={() => router.push('/history')}>
                 <Badge badgeContent={4} color="error">
                   <NotificationsIcon fontSize="small" />
                 </Badge>
               </IconButton>
             </Tooltip>
-            <Tooltip title="Quick Search">
-              <IconButton color="inherit" size="small">
+            <Tooltip title="Quick Search - Tools">
+              <IconButton color="inherit" size="small" onClick={() => router.push('/tools')}>
                 <SearchIcon fontSize="small" />
               </IconButton>
             </Tooltip>
@@ -203,16 +217,35 @@ export default function Layout({ children }: LayoutProps) {
         </Drawer>
       </Box>
 
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
-          p: 3,
-          width: { sm: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px',
-        }}
-      >
-        {children}
+      <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', flexGrow: 1 }}>
+        <Box
+          component="main"
+          sx={{
+            flexGrow: 1,
+            p: 3,
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            mt: '64px',
+          }}
+        >
+          {children}
+        </Box>
+        <Box
+          component="footer"
+          sx={{
+            py: 2,
+            px: 3,
+            borderTop: '1px solid rgba(255,255,255,0.05)',
+            bgcolor: 'rgba(0,0,0,0.2)',
+            color: 'rgba(255,255,255,0.4)',
+            fontSize: 12,
+            textAlign: 'center',
+          }}
+        >
+          OSINT Command Center © 2026 | Для освітніх цілей
+          <Box component="span" sx={{ display: 'block', mt: 0.5, fontSize: 11 }}>
+            Created by MiniMax Agent
+          </Box>
+        </Box>
       </Box>
     </Box>
   );

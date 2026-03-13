@@ -15,10 +15,8 @@ import {
   PlayArrow as PlayIcon,
   Info as InfoIcon
 } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../lib/api';
 import Layout from '../components/Layout';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface Tool {
   id: string;
@@ -55,7 +53,7 @@ export default function ToolsPage() {
   const fetchTools = async () => {
     try {
       setLoading(true);
-      const response = await axios.get(`${API_URL}/tools/`);
+      const response = await api.get('/tools/');
       setCategories(response.data.categories);
     } catch (error) {
       console.error('Failed to fetch tools:', error);
@@ -104,7 +102,7 @@ export default function ToolsPage() {
     
     try {
       showSnackbar(`Initializing ${selectedTool.name}...`, 'info');
-      const response = await axios.post(`${API_URL}/tools/${selectedTool.id}/run`, {
+      const response = await api.post(`/tools/${selectedTool.id}/run`, {
         query: runQuery,
         api_key: apiKey
       });
@@ -123,14 +121,24 @@ export default function ToolsPage() {
     })
   );
 
+  const totalCategories = Object.keys(categories).length;
+  const totalTools = Object.values(categories).reduce((acc, c) => acc + (c.tools?.length || 0), 0);
+  const withApi = Object.values(categories).reduce((acc, c) => 
+    acc + (c.tools?.filter((t: Tool) => t.api === '✓').length || 0), 0);
+
   return (
     <Layout>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
-          Tools Catalog
+      <Box sx={{ mb: 3 }}>
+        <Typography variant="h4" sx={{ fontWeight: 800, mb: 2, color: '#fff' }}>
+          Набір OSINT Інструментів
         </Typography>
-        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          Explore and manage 150+ integrated OSINT intelligence tools
+        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap', mb: 3 }}>
+          <Chip label={`Категорії ${totalCategories}`} sx={{ bgcolor: 'rgba(33,150,243,0.2)', color: '#fff' }} />
+          <Chip label={`Всього інструментів ${totalTools}`} sx={{ bgcolor: 'rgba(33,150,243,0.2)', color: '#fff' }} />
+          <Chip label={`Доступно у наборі ${withApi}`} sx={{ bgcolor: 'rgba(76,175,80,0.2)', color: '#fff' }} />
+        </Box>
+        <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+          Показано {filteredTools.length} інструментів
         </Typography>
       </Box>
 
@@ -138,7 +146,7 @@ export default function ToolsPage() {
         <TextField
           fullWidth
           variant="outlined"
-          placeholder="Search by tool name, description or capability..."
+          placeholder="Пошук за назвою, описом або можливостями..."
           value={searchQuery}
           onChange={handleSearch}
           sx={{ 
@@ -164,7 +172,7 @@ export default function ToolsPage() {
           onClick={handleFilterClick}
           sx={{ borderColor: 'rgba(255,255,255,0.1)', color: '#fff' }}
         >
-          {selectedCategory ? categories[selectedCategory]?.name : 'All Categories'}
+          {selectedCategory ? categories[selectedCategory]?.name : 'Усі категорії'}
         </Button>
         <Menu
           anchorEl={anchorEl}
@@ -174,7 +182,7 @@ export default function ToolsPage() {
             sx: { bgcolor: '#1a1d24', color: '#fff', border: '1px solid rgba(255,255,255,0.1)' }
           }}
         >
-          <MenuItem onClick={() => handleFilterClose(null)}>All Categories</MenuItem>
+          <MenuItem onClick={() => handleFilterClose(null)}>Усі категорії</MenuItem>
           <Divider sx={{ borderColor: 'rgba(255,255,255,0.05)' }} />
           {Object.entries(categories).map(([key, cat]) => (
             <MenuItem key={key} onClick={() => handleFilterClose(key)}>
@@ -192,6 +200,16 @@ export default function ToolsPage() {
             </Grid>
           ))}
         </Grid>
+      ) : filteredTools.length === 0 ? (
+        <Box sx={{ py: 8, textAlign: 'center' }}>
+          <SearchIcon sx={{ fontSize: 64, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
+          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
+            Інструменти не знайдені
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)' }}>
+            Спробуйте змінити критерії пошуку
+          </Typography>
+        </Box>
       ) : (
         <Grid container spacing={2}>
           {filteredTools.map((tool) => (
