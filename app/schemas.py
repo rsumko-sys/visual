@@ -59,6 +59,14 @@ class TaskResponse(BaseModel):
     status: str
     result: Optional[dict] = None
 
+class ToolParamDef(BaseModel):
+    key: str
+    label: str
+    type: str
+    min: int
+    max: int
+    default: int
+
 class ToolInfo(BaseModel):
     id: str
     name: str
@@ -66,6 +74,7 @@ class ToolInfo(BaseModel):
     category: str
     type: str
     api: str
+    params: Optional[List[ToolParamDef]] = None
 
 class CategoryInfo(BaseModel):
     name: str

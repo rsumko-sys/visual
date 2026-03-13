@@ -40,12 +40,13 @@ def _mock_result(tool_id: str, query: str) -> dict:
 
 
 @celery_app.task(name="run_osint_tool")
-def run_osint_tool(tool_id: str, query: str, investigation_id: str = None, api_key: str = None):
+def run_osint_tool(tool_id: str, query: str, investigation_id: str = None, api_key: str = None, options: dict = None):
     """Глобальна задача для запуску будь-якого OSINT інструменту (Золотий стандарт 2026)"""
-    logger.info(f"Task started: Running {tool_id} for query: {query}")
+    opts = options or {}
+    logger.info(f"Task started: Running {tool_id} for query: {query} options={opts}")
 
     # Спроба реальної інтеграції
-    data_result = execute_tool(tool_id, query or "", api_key)
+    data_result = execute_tool(tool_id, query or "", api_key, opts)
 
     # Fallback на симуляцію, якщо провайдер недоступний
     if data_result is None:

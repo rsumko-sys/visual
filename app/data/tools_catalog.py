@@ -9,8 +9,8 @@ TOOLS_CATALOG = {
         "count": 20,
         "tools": [
             {"id": "deepstatemap", "name": "DeepStateMap", "description": "Інтерактивна карта фронту в Україні з OSINT-даними", "category": "GEOINT", "type": "Військова карта", "api": "✓"},
-            {"id": "liveuamap", "name": "Liveuamap", "description": "Інтерактивна карта конфліктів у реальному часі", "category": "GEOINT", "type": "Війською карта", "api": "✓"},
-            {"id": "conflictly", "name": "Conflictly", "description": "Мапінг інцидентів у зонах конфліктів (удари, авіація)", "category": "GEOINT", "type": "Війська карта", "api": "✓"},
+            {"id": "liveuamap", "name": "Liveuamap", "description": "Інтерактивна карта конфліктів у реальному часі", "category": "GEOINT", "type": "Військова карта", "api": "✓"},
+            {"id": "conflictly", "name": "Conflictly", "description": "Мапінг інцидентів у зонах конфліктів (удари, авіація)", "category": "GEOINT", "type": "Військова карта", "api": "✓"},
             {"id": "geospy", "name": "GeoSpy.ai", "description": "LGM-модель для геолокації за пікселями зображення (Graylark)", "category": "GEOINT", "type": "AI Геолокація", "api": "✓"},
             {"id": "picarta", "name": "Picarta", "description": "AI-геолокація фотографій за архітектурою", "category": "GEOINT", "type": "AI Аналіз", "api": "✓"},
             {"id": "google_earth_pro", "name": "Google Earth Pro", "description": "Історичні супутникові знімки та 3D-моделі", "category": "GEOINT", "type": "Супутникові дані", "api": "✗"},
@@ -36,7 +36,7 @@ TOOLS_CATALOG = {
         "name": "Сигналізація та Технічна розвідка (SIGINT)",
         "count": 19,
         "tools": [
-            {"id": "shodan", "name": "Shodan", "description": "Пошук IoT пристроїв та мережевої інфраструктури", "category": "SIGINT", "type": "Мережа", "api": "✓"},
+            {"id": "shodan", "name": "Shodan", "description": "Пошук IoT пристроїв та мережевої інфраструктури", "category": "SIGINT", "type": "Мережа", "api": "✓", "params": [{"key": "limit", "label": "Result Limit", "type": "slider", "min": 5, "max": 100, "default": 10}]},
             {"id": "censys", "name": "Censys", "description": "TLS сертифікати, хости та мережева інфраструктура", "category": "SIGINT", "type": "Мережа", "api": "✓"},
             {"id": "fofa", "name": "FOFA", "description": "Пошук мережевих активів (китайський сегмент)", "category": "SIGINT", "type": "Мережа", "api": "✓"},
             {"id": "websdr", "name": "WebSDR", "description": "Онлайн-приймачі HF-радіо для моніторингу частот", "category": "SIGINT", "type": "Радіорозвідка", "api": "✗"},
@@ -64,7 +64,7 @@ TOOLS_CATALOG = {
         "count": 16,
         "tools": [
             {"id": "osavul_nebula", "name": "Osavul Nebula", "description": "ШІ-моніторинг Telegram-каналів та наративів", "category": "SOCMINT", "type": "Telegram/AI", "api": "✓"},
-            {"id": "maigret_v3", "name": "Maigret v3.0", "description": "Пошук нікнейму на 2500+ сайтах (оновлення 2026)", "category": "SOCMINT", "type": "Нікнейм", "api": "✗"},
+            {"id": "maigret_v3", "name": "Maigret v3.0", "description": "Пошук нікнейму на 2500+ сайтах (оновлення 2026)", "category": "SOCMINT", "type": "Нікнейм", "api": "✗", "params": [{"key": "depth", "label": "Search Depth", "type": "slider", "min": 1, "max": 5, "default": 2}, {"key": "limit", "label": "Result Limit", "type": "slider", "min": 10, "max": 100, "default": 30}]},
             {"id": "whatsmyname_json", "name": "WhatsMyName (JSON)", "description": "Прямий парсинг еталонної бази wmn-dat.json", "category": "SOCMINT", "type": "Нікнейм", "api": "✓"},
             {"id": "user_scanner", "name": "User-Scanner", "description": "Сучасна альтернатива Holehe для перевірки реєстрацій", "category": "SOCMINT", "type": "Енумерація", "api": "✓"},
             {"id": "tgstat", "name": "TGStat", "description": "Глибока аналітика Telegram каналів", "category": "SOCMINT", "type": "Telegram", "api": "✓"},

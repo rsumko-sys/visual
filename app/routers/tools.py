@@ -106,14 +106,16 @@ async def run_tool(
         raise HTTPException(status_code=404, detail=f"Інструмент '{tool_id}' не знайдений")
 
     # Підтримка JSON body (frontend) та query params
+    options = {}
     if body:
         query = body.query or query
         investigation_id = body.investigation_id or investigation_id
         api_key = body.api_key or api_key
+        options = body.options or {}
 
     # Відправка задачі в чергу Celery
     try:
-        task = run_osint_tool.delay(tool_id, query or "", investigation_id, api_key)
+        task = run_osint_tool.delay(tool_id, query or "", investigation_id, api_key, options)
         task_id = task.id
         status = "queued"
     except Exception as e:

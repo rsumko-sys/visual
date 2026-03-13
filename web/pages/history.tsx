@@ -38,6 +38,7 @@ export default function HistoryPage() {
 
   return (
     <Layout>
+      <Box sx={{ position: 'relative', zIndex: 2, pointerEvents: 'auto', isolation: 'isolate' }}>
       <Box sx={{ mb: 4 }}>
         <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
           Історія розслідувань
@@ -61,25 +62,25 @@ export default function HistoryPage() {
           <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', mb: 3, display: 'block' }}>
             Історія розслідувань зберігається для авторизованих користувачів
           </Typography>
-          <Button variant="contained" color="primary" startIcon={<SearchIcon />} onClick={() => router.push('/settings')}>
+          <Button type="button" variant="contained" color="primary" startIcon={<SearchIcon />} onClick={() => router.push('/settings')}>
             Увійти в налаштуваннях
           </Button>
         </Paper>
       ) : error ? (
         <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
           <Typography variant="body1" sx={{ color: 'error.main', mb: 2 }}>{error}</Typography>
-          <Button variant="outlined" color="primary" onClick={() => router.push('/investigation')}>Почати дослідження</Button>
+          <Button type="button" variant="outlined" color="primary" onClick={() => router.push('/investigation')}>Почати дослідження</Button>
         </Paper>
       ) : investigations.length === 0 ? (
         <Paper sx={{ p: 6, textAlign: 'center', bgcolor: 'rgba(255,255,255,0.03)', border: '1px dashed rgba(255,255,255,0.1)' }}>
-          <HistoryIcon sx={{ fontSize: 64, color: 'rgba(255,255,255,0.2)', mb: 2 }} />
-          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.5)', mb: 1 }}>
-            Історія порожня
+          <HistoryIcon sx={{ fontSize: 64, color: 'rgba(255,255,255,0.12)', mb: 2, opacity: 0.8 }} />
+          <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
+            Тут з&apos;являться ваші розслідування
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.3)', mb: 3, display: 'block' }}>
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: 3, display: 'block' }}>
             Запустіть розслідування в Investigation Hub, щоб зберегти історію
           </Typography>
-          <Button variant="contained" color="primary" startIcon={<SearchIcon />} onClick={() => router.push('/investigation')}>
+          <Button type="button" variant="contained" color="primary" startIcon={<SearchIcon />} onClick={() => router.push('/investigation')}>
             Почати дослідження
           </Button>
         </Paper>
@@ -98,6 +99,7 @@ export default function HistoryPage() {
           ))}
         </List>
       )}
+      </Box>
     </Layout>
   );
 }

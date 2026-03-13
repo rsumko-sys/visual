@@ -1,20 +1,56 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Box, Typography, Paper, TextField, IconButton } from '@mui/material';
-import { Send as SendIcon } from '@mui/icons-material';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Box, Typography, Paper, TextField, IconButton, Button } from '@mui/material';
+import { Send as SendIcon, PlayArrow as PlayIcon } from '@mui/icons-material';
 import Layout from '../components/Layout';
+
+const DEMO_LOGS = [
+  '[INFO] Initializing Maigret...',
+  '[OK] Maigret v3.0 loaded',
+  '[INFO] Target: target_user_01',
+  '[INFO] Scanning 12 platforms...',
+  '[OK] Facebook — profile found',
+  '[OK] Telegram — @target linked',
+  '[OK] LinkedIn — company match',
+  '[INFO] Aggregating results...',
+  '[OK] 3 profiles collected',
+  '[DONE] Search completed in 2.4s',
+];
 
 export default function TerminalPage() {
   const [lines, setLines] = useState<string[]>([
     'OSINT Platform 2026 — Terminal',
-    'Введіть команду (наприклад: tools list, run shodan 8.8.8.8)',
+    'Введіть команду або натисніть Start Search для демо',
     '',
   ]);
   const [input, setInput] = useState('');
+  const [searchRunning, setSearchRunning] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView();
   }, [lines]);
+
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const handleStartSearch = useCallback(() => {
+    if (searchRunning) return;
+    setSearchRunning(true);
+    setLines((prev) => [...prev, '', `$ start search target_user_01`, '']);
+    let i = 0;
+    intervalRef.current = setInterval(() => {
+      if (i < DEMO_LOGS.length) {
+        setLines((prev) => [...prev, DEMO_LOGS[i]]);
+        i++;
+      } else {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        intervalRef.current = null;
+        setSearchRunning(false);
+        setLines((prev) => [...prev, '']);
+      }
+    }, 400);
+  }, [searchRunning]);
+
+  useEffect(() => () => { if (intervalRef.current) clearInterval(intervalRef.current); }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,6 +71,18 @@ export default function TerminalPage() {
         </Typography>
       </Box>
 
+      <Box sx={{ mb: 2 }}>
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<PlayIcon />}
+          onClick={handleStartSearch}
+          disabled={searchRunning}
+        >
+          {searchRunning ? 'Running...' : 'Start Search'}
+        </Button>
+      </Box>
+
       <Paper
         sx={{
           p: 2,
@@ -46,7 +94,17 @@ export default function TerminalPage() {
       >
         <Box sx={{ color: 'rgba(255,255,255,0.8)', fontSize: 14 }}>
           {lines.map((line, i) => (
-            <Box key={i} sx={{ mb: 0.5 }}>{line}</Box>
+            <Box key={i} sx={{ mb: 0.5 }}>
+              {line.startsWith('[OK]') ? (
+                <span style={{ color: '#10b981' }}>{line}</span>
+              ) : line.startsWith('[INFO]') ? (
+                <span style={{ color: '#60a5fa' }}>{line}</span>
+              ) : line.startsWith('[DONE]') ? (
+                <span style={{ color: '#00d4aa', fontWeight: 600 }}>{line}</span>
+              ) : (
+                line
+              )}
+            </Box>
           ))}
           <div ref={endRef} />
         </Box>

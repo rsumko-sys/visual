@@ -13,15 +13,19 @@ logger = logging.getLogger(__name__)
 class ShodanProvider:
     """Провайдер для Shodan та Shodan IoT Monitor."""
 
-    def run(self, query: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    def run(self, query: str, api_key: Optional[str] = None, options: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
         """
         Виконує пошук у Shodan.
         query: IP-адреса для host lookup або search query (наприклад "apache", "port:22").
+        options: limit (5-100) для search.
         """
         key = api_key or (settings.SHODAN_KEY if settings.SHODAN_KEY else None)
         if not key:
             logger.debug("Shodan: no API key configured")
             return None
+
+        opts = options or {}
+        limit = min(100, max(5, int(opts.get("limit", 10))))
 
         try:
             import shodan
@@ -34,8 +38,8 @@ class ShodanProvider:
                 return self._format_host_result(host)
             else:
                 # Search (споживає 1 кредит на 100 результатів)
-                results = api.search(query_stripped, limit=10)
-                return self._format_search_result(results, query_stripped)
+                results = api.search(query_stripped, limit=limit)
+                return self._format_search_result(results, query_stripped, limit)
         except Exception as e:
             logger.error(f"Shodan API error: {e}")
             raise
@@ -64,9 +68,9 @@ class ShodanProvider:
             "raw_log": f"Shodan host: {host.get('ip_str')} | org: {host.get('org', 'N/A')} | ports: {ports}",
         }
 
-    def _format_search_result(self, results: Dict, query: str) -> Dict[str, Any]:
+    def _format_search_result(self, results: Dict, query: str, limit: int = 10) -> Dict[str, Any]:
         """Форматує результат search."""
-        matches = results.get("matches", [])[:10]
+        matches = results.get("matches", [])[:limit]
         total = results.get("total", 0)
         indicators = []
         for m in matches[:5]:

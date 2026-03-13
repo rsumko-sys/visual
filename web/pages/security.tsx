@@ -1,9 +1,11 @@
 import React from 'react';
-import { Box, Typography, Paper, List, ListItem, ListItemIcon, ListItemText } from '@mui/material';
-import { Security as SecurityIcon, CheckCircle, Warning } from '@mui/icons-material';
+import { Box, Typography, Paper, List, ListItem, ListItemIcon, ListItemText, Button } from '@mui/material';
+import { CheckCircle, Warning } from '@mui/icons-material';
+import { useRouter } from 'next/router';
 import Layout from '../components/Layout';
 
 export default function SecurityPage() {
+  const router = useRouter();
   const checks = [
     { ok: true, text: 'API доступний через HTTPS (локально: HTTP)' },
     { ok: true, text: 'JWT автентифікація активна' },
@@ -22,14 +24,40 @@ export default function SecurityPage() {
         </Typography>
       </Box>
 
-      <Paper sx={{ p: 4, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+      <Paper sx={{ p: 4, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)' }}>
         <List>
           {checks.map((c, i) => (
-            <ListItem key={i}>
+            <ListItem 
+              key={i} 
+              sx={!c.ok ? { 
+                bgcolor: 'rgba(239, 68, 68, 0.12)', 
+                borderRadius: 2, 
+                mb: 1,
+                border: '1px solid rgba(239, 68, 68, 0.3)',
+              } : {}}
+            >
               <ListItemIcon>
-                {c.ok ? <CheckCircle color="success" /> : <Warning color="warning" />}
+                {c.ok ? <CheckCircle color="success" /> : <Warning sx={{ color: '#f97316' }} />}
               </ListItemIcon>
-              <ListItemText primary={c.text} primaryTypographyProps={{ color: 'rgba(255,255,255,0.8)' }} />
+              <ListItemText 
+                primary={c.text} 
+                primaryTypographyProps={{ 
+                  color: !c.ok ? '#fca5a5' : 'rgba(255,255,255,0.9)',
+                  fontWeight: !c.ok ? 600 : 400,
+                }} 
+              />
+              {!c.ok && (
+                <Button 
+                  type="button"
+                  size="small" 
+                  variant="outlined" 
+                  color="warning"
+                  sx={{ ml: 1, flexShrink: 0 }}
+                  onClick={() => router.push('/settings')}
+                >
+                  Як це виправити?
+                </Button>
+              )}
             </ListItem>
           ))}
         </List>

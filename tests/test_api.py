@@ -1,8 +1,14 @@
 import pytest
+import random
+import string
 from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
+
+
+def _random_username():
+    return "testuser_" + "".join(random.choices(string.ascii_lowercase + string.digits, k=8))
 
 def test_root():
     response = client.get("/")
@@ -41,16 +47,17 @@ def test_run_tool():
     assert response.json()["status"] in ("queued", "mocked_success")
 
 def test_register_user():
+    username = _random_username()
     response = client.post(
         "/auth/register",
         json={
-            "username": "testuser",
-            "email": "test@example.com",
+            "username": username,
+            "email": f"{username}@example.com",
             "password": "testpass123"
         }
     )
     assert response.status_code == 200
-    assert response.json()["username"] == "testuser"
+    assert response.json()["username"] == username
 
 def test_register_duplicate_user():
     # First registration

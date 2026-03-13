@@ -20,7 +20,7 @@ def get_provider(tool_id: str):
     return _PROVIDERS.get(tool_id)
 
 
-def execute_tool(tool_id: str, query: str, api_key: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def execute_tool(tool_id: str, query: str, api_key: Optional[str] = None, options: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
     """
     Виконує інструмент через реальний провайдер.
     Повертає результат або None (якщо провайдер недоступний/немає ключа).
@@ -28,8 +28,9 @@ def execute_tool(tool_id: str, query: str, api_key: Optional[str] = None) -> Opt
     provider = get_provider(tool_id)
     if not provider:
         return None
+    opts = options or {}
     try:
-        return provider.run(query, api_key)
+        return provider.run(query, api_key, opts)
     except Exception as e:
         logger.warning(f"Provider {tool_id} failed: {e}")
         return None

@@ -5,8 +5,11 @@ import { getApiBaseUrl } from '../lib/api';
 import api from '../lib/api';
 import { useAuth } from '../context/auth';
 
+const SETTINGS_STORE_KEYS_KEY = 'minimax_settings_store_keys';
+
 export default function SettingsPage() {
   const [apiUrl, setApiUrl] = useState('http://localhost:8000');
+  const [storeApiKeysLocally, setStoreApiKeysLocally] = useState(true);
   const [saved, setSaved] = useState(false);
   const [loginUsername, setLoginUsername] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
@@ -16,11 +19,18 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setApiUrl(getApiBaseUrl());
+    try {
+      const stored = localStorage.getItem(SETTINGS_STORE_KEYS_KEY);
+      if (stored !== null) setStoreApiKeysLocally(stored === 'true');
+    } catch {
+      /* ignore */
+    }
   }, []);
 
   const handleSave = () => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('NEXT_PUBLIC_API_URL', apiUrl.replace(/\/$/, ''));
+      localStorage.setItem(SETTINGS_STORE_KEYS_KEY, String(storeApiKeysLocally));
     }
     setSaved(true);
   };
@@ -49,16 +59,17 @@ export default function SettingsPage() {
 
   return (
     <Layout>
-      <Box sx={{ mb: 4 }}>
-        <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
-          Налаштування
-        </Typography>
-        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)' }}>
-          Конфігурація платформи та API
-        </Typography>
-      </Box>
+      <Box sx={{ position: 'relative', zIndex: 2, pointerEvents: 'auto', isolation: 'isolate' }}>
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
+            Налаштування
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)' }}>
+            Конфігурація платформи та API
+          </Typography>
+        </Box>
 
-      <Paper sx={{ p: 4, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <Paper sx={{ p: 4, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <Typography variant="subtitle1" sx={{ color: '#fff', mb: 2 }}>API Endpoint</Typography>
         <TextField
           fullWidth
@@ -74,15 +85,29 @@ export default function SettingsPage() {
           }}
         />
         <FormControlLabel
-          control={<Switch defaultChecked color="primary" />}
+          control={
+            <Switch
+              checked={storeApiKeysLocally}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setStoreApiKeysLocally(v);
+                try {
+                  localStorage.setItem(SETTINGS_STORE_KEYS_KEY, String(v));
+                } catch {
+                  /* ignore */
+                }
+              }}
+              color="primary"
+            />
+          }
           label={<span style={{ color: 'rgba(255,255,255,0.8)' }}>Зберігати API-ключі локально</span>}
         />
         <Box sx={{ mt: 3 }}>
-          <Button variant="contained" color="primary" onClick={handleSave}>Зберегти</Button>
-        </Box>
-      </Paper>
+          <Button type="button" variant="contained" color="primary" onClick={handleSave}>Зберегти</Button>
+          </Box>
+        </Paper>
 
-      <Paper sx={{ p: 4, mt: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+        <Paper sx={{ p: 4, mt: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
         <Typography variant="subtitle1" sx={{ color: '#fff', mb: 2 }}>Авторизація</Typography>
         {token ? (
           <Box>
@@ -107,14 +132,15 @@ export default function SettingsPage() {
               sx={{ mb: 2, '& .MuiInputBase-root': { color: '#fff' }, '& .MuiInputLabel-root': { color: 'rgba(255,255,255,0.6)' }, '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' } }}
             />
             {loginError && <Typography variant="caption" sx={{ color: 'error.main', display: 'block', mb: 1 }}>{loginError}</Typography>}
-            <Button variant="contained" color="primary" onClick={handleLogin} disabled={loginLoading}>Увійти</Button>
+            <Button type="button" variant="contained" color="primary" onClick={handleLogin} disabled={loginLoading}>Увійти</Button>
           </Box>
         )}
-      </Paper>
+        </Paper>
 
-      <Snackbar open={saved} autoHideDuration={3000} onClose={() => setSaved(false)}>
-        <Alert severity="success">Налаштування збережено</Alert>
-      </Snackbar>
+        <Snackbar open={saved} autoHideDuration={3000} onClose={() => setSaved(false)}>
+          <Alert severity="success">Налаштування збережено</Alert>
+        </Snackbar>
+      </Box>
     </Layout>
   );
 }

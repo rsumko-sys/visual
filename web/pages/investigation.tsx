@@ -215,29 +215,43 @@ export default function InvestigationHub() {
         </Typography>
       </Box>
 
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={4}>
-          <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2 }}>
+      <Grid container spacing={3} sx={{ alignItems: 'flex-start', overflow: 'hidden' }}>
+        <Grid item xs={12} md={4} sx={{ minWidth: 0, position: 'relative', zIndex: 10 }}>
+          <Paper elevation={0} sx={{ p: 3, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, minWidth: 280, overflow: 'hidden' }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
               <AgentIcon color="primary" fontSize="small" /> 1. Set Target Query
             </Typography>
             <TextField
               fullWidth
               variant="outlined"
-              placeholder="Username, Email, IP or Domain..."
+              placeholder="Username, Email, IP, Domain"
               value={query}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
               sx={{ 
                 mb: 4,
                 bgcolor: 'rgba(0,0,0,0.2)',
                 '& .MuiInputBase-root': { color: '#fff' },
-                '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
+                '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' },
+                '& .MuiOutlinedInput-root:focus-within fieldset': { 
+                  borderColor: 'primary.main', 
+                  boxShadow: '0 0 0 2px rgba(0, 212, 170, 0.25)' 
+                }
               }}
             />
 
-            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
-              <AddIcon color="primary" fontSize="small" /> 2. Chain OSINT Tools
-            </Typography>
+            <Box sx={{ 
+              mb: 2, 
+              p: 1.5, 
+              borderRadius: 1, 
+              bgcolor: 'rgba(0,212,170,0.08)', 
+              border: '1px solid rgba(0,212,170,0.2)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+            }}>
+              <AddIcon color="primary" fontSize="small" />
+              <Typography variant="subtitle2" sx={{ color: '#fff', fontWeight: 600 }}>2. Chain OSINT Tools</Typography>
+            </Box>
             
             <Box sx={{ mb: 3 }}>
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 1, display: 'block' }}>Suggested Tools</Typography>
@@ -247,9 +261,15 @@ export default function InvestigationHub() {
                     key={tool.id}
                     label={tool.name}
                     onClick={() => handleAddTool(tool)}
-                    icon={<AddIcon />}
+                    icon={<AddIcon sx={{ fontSize: 16 }} />}
                     size="small"
-                    sx={{ bgcolor: 'rgba(255,255,255,0.05)', color: '#fff', '&:hover': { bgcolor: 'primary.main' } }}
+                    sx={{ 
+                      bgcolor: 'rgba(255,255,255,0.05)', 
+                      color: '#fff', 
+                      transition: 'all 0.2s ease',
+                      '&:hover': { bgcolor: 'rgba(0, 212, 170, 0.25)', transform: 'scale(1.02)' },
+                      '& .MuiChip-label': { overflow: 'visible' } 
+                    }}
                   />
                 ))}
               </Box>
@@ -288,23 +308,28 @@ export default function InvestigationHub() {
             </List>
 
             <Button
+              type="button"
               fullWidth
               variant="contained"
               startIcon={<PlayIcon />}
               disabled={!query || selectedTools.length === 0 || investigationStatus === 'running'}
               onClick={handleStartInvestigation}
-              sx={{ py: 1.5, fontWeight: 700 }}
+              sx={{ 
+                py: 1.5, 
+                fontWeight: 700,
+                '&.Mui-disabled': { bgcolor: 'rgba(0,212,170,0.2)', color: 'rgba(255,255,255,0.5)' }
+              }}
             >
               Start Multi-Vector Search
             </Button>
           </Paper>
         </Grid>
 
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 0, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, overflow: 'hidden', minHeight: '600px', display: 'flex', flexDirection: 'column' }}>
-            <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Grid item xs={12} md={8} sx={{ position: 'relative', zIndex: 1, pointerEvents: 'auto' }}>
+          <Paper elevation={0} sx={{ p: 0, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, overflow: 'hidden', minHeight: '600px', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+            <Box sx={{ p: 2, bgcolor: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <LabIcon sx={{ color: 'primary.main' }} />
+                <LabIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Investigation Pipeline</Typography>
               </Box>
               {investigationStatus === 'running' && (
@@ -312,11 +337,11 @@ export default function InvestigationHub() {
               )}
             </Box>
 
-            <Box sx={{ p: 3, flexGrow: 1 }}>
+            <Box sx={{ p: 3, flexGrow: 1, position: 'relative', overflow: 'hidden', minHeight: 400, isolation: 'isolate' }}>
               {investigationStatus === 'idle' ? (
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', py: 10, opacity: 0.3 }}>
-                  <SearchIcon sx={{ fontSize: 64, mb: 2 }} />
-                  <Typography>Configure your investigation parameters to begin</Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 350, py: 6 }}>
+                  <SearchIcon sx={{ fontSize: 48, mb: 2, color: 'rgba(255,255,255,0.08)', pointerEvents: 'none' }} />
+                  <Typography sx={{ color: 'rgba(255,255,255,0.5)', textAlign: 'center', px: 2 }}>Configure your investigation parameters to begin</Typography>
                 </Box>
               ) : (
                 <>
