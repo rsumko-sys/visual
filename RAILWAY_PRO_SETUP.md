@@ -1,14 +1,21 @@
 # Railway Pro — повне налаштування OSINT Platform
 
+## Автоматично зроблено (через API)
+
+- [x] Домен API: **https://robust-kindness-production.up.railway.app**
+- [x] Змінні API: SECRET_KEY, DATABASE_URL (sqlite), REDIS_URL
+- [x] Змінні dossier: NEXT_PUBLIC_API_URL
+- [x] Redeploy обох сервісів
+
 ## Чекліст (відмічай по ходу)
 
-- [ ] 1. Згенерувати домен для API (robust-kindness)
-- [ ] 2. Додати Postgres (Database → PostgreSQL)
-- [ ] 3. Додати Redis (Database → Redis)
-- [ ] 4. Додати змінні в API (SECRET_KEY, DATABASE_URL, REDIS_URL, CELERY_*)
-- [ ] 5. Додати NEXT_PUBLIC_API_URL в dossier
-- [ ] 6. Redeploy dossier
-- [ ] 7. Зареєструвати користувача (UI або `scripts/register_admin.sh`)
+- [x] 1. Згенерувати домен для API (robust-kindness)
+- [ ] 2. Додати Postgres (Database → PostgreSQL) — для продакшену
+- [ ] 3. Додати Redis (Database → Redis) — для Celery
+- [x] 4. Змінні API (SECRET_KEY, DATABASE_URL, REDIS_URL) — вже встановлено
+- [x] 5. NEXT_PUBLIC_API_URL в dossier — вже встановлено
+- [x] 6. Redeploy dossier та API — виконано
+- [ ] 7. Зареєструвати користувача: `./scripts/register_admin.sh` або через UI
 
 ---
 
@@ -60,6 +67,7 @@
 
 ## 4. Перевірка
 
-- API health: `https://<api-domain>/health`
+- API health: https://robust-kindness-production.up.railway.app/health
 - Dossier: https://dossier-production-871b.up.railway.app
+- Реєстрація: `./scripts/register_admin.sh` (або UI → Реєстрація)
 - Логін → Investigation → Maigret → PDF Report
