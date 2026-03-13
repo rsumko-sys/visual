@@ -21,6 +21,7 @@ import {
   AttachMoney as CryptoIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
+import ErrorBoundary from '../components/ErrorBoundary';
 import PolishedSlider from '../components/PolishedSlider';
 import { useDebounce } from '../hooks/useDebounce';
 import { useRouter } from 'next/router';
@@ -202,6 +203,7 @@ export default function VisualGraphPage() {
 
   return (
     <Layout>
+      <ErrorBoundary>
       <Box data-print-hide sx={{ mb: 4, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <Box>
           <Typography variant="h4" sx={{ fontWeight: 800, mb: 1, color: '#fff' }}>
@@ -322,6 +324,7 @@ export default function VisualGraphPage() {
       <Snackbar open={!!snackbar} autoHideDuration={2000} onClose={() => setSnackbar('')}>
         <Alert severity="success">{snackbar}</Alert>
       </Snackbar>
+      </ErrorBoundary>
     </Layout>
   );
 }

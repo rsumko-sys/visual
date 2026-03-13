@@ -49,6 +49,7 @@ export default function ToolsPage() {
   const router = useRouter();
   const [categories, setCategories] = useState<{ [key: string]: CategoryData }>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   
@@ -84,11 +85,13 @@ export default function ToolsPage() {
   const fetchTools = async () => {
     try {
       setLoading(true);
+      setLoadError(false);
       const response = await api.get('/tools/');
       setCategories(response.data?.categories ?? {});
     } catch (error) {
       console.error('Failed to fetch tools:', error);
-      showSnackbar('Failed to load tools catalog', 'error');
+      setLoadError(true);
+      showSnackbar('Не вдалося завантажити каталог. Перевірте API URL в Налаштуваннях.', 'error');
     } finally {
       setLoading(false);
     }
@@ -280,11 +283,16 @@ export default function ToolsPage() {
         <Box sx={{ py: 8, textAlign: 'center' }}>
           <SearchIcon sx={{ fontSize: 64, color: 'rgba(255,255,255,0.12)', mb: 2, opacity: 0.8 }} />
           <Typography variant="h6" sx={{ color: 'rgba(255,255,255,0.6)', mb: 1 }}>
-            Інструменти не знайдені
+            {loadError ? 'Помилка завантаження' : 'Інструменти не знайдені'}
           </Typography>
-          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)' }}>
-            Спробуйте змінити критерії пошуку
+          <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.45)', mb: loadError ? 2 : 0 }}>
+            {loadError ? 'Перевірте підключення до API в Налаштуваннях або натисніть Повторити' : 'Спробуйте змінити критерії пошуку'}
           </Typography>
+          {loadError && (
+            <Button variant="contained" color="primary" onClick={fetchTools} sx={{ mt: 1 }}>
+              Повторити
+            </Button>
+          )}
         </Box>
       ) : (
         <Box sx={{ 

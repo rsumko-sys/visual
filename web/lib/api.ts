@@ -7,11 +7,31 @@ import axios, { AxiosError } from 'axios';
 
 const STORAGE_KEY = 'NEXT_PUBLIC_API_URL';
 const TOKEN_KEY = 'osint_auth_token';
+const PRODUCTION_API = 'https://robust-kindness-production.up.railway.app';
+
+/** Нормалізує URL: s:// → https://, без протоколу → https:// */
+export function normalizeApiUrl(url: string): string {
+  const clean = url.replace(/\/$/, '').trim();
+  if (!clean) return clean;
+  if (clean.startsWith('s://')) return 'https://' + clean.slice(3);
+  if (clean.startsWith('//')) return 'https:' + clean;
+  if (!/^https?:\/\//i.test(clean)) return 'https://' + clean;
+  return clean;
+}
 
 export function getApiBaseUrl(): string {
   if (typeof window !== 'undefined') {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return stored.replace(/\/$/, '');
+    const isProductionDossier = window.location.hostname?.includes('railway.app');
+    if (stored) {
+      const clean = normalizeApiUrl(stored) || stored.replace(/\/$/, '');
+      // На production Dossier — не використовувати localhost
+      if (isProductionDossier && (clean.includes('localhost') || clean.includes('127.0.0.1'))) {
+        return PRODUCTION_API;
+      }
+      return clean;
+    }
+    if (isProductionDossier) return PRODUCTION_API;
   }
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 }
