@@ -13,8 +13,8 @@ watchPatterns = [
 ]
 
 [deploy]
-healthcheckPath = "/health"
-healthcheckTimeout = 60
+healthcheckPath = "/health/"
+healthcheckTimeout = 180
 # Use Dockerfile CMD (start.sh) so PORT is expanded inside container
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 10
