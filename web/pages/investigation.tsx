@@ -82,6 +82,17 @@ export default function InvestigationHub() {
     setSelectedTools(selectedTools.filter((t: SelectedTool) => t.id !== id));
   };
 
+  const handleNewInvestigation = () => {
+    setQuery('');
+    setSelectedTools([]);
+    setResults([]);
+    setInvestigationStatus('idle');
+    setCurrentInvestigationId(`inv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+    setSaveStatus(null);
+    setPdfError(null);
+    setExpandedResult(null);
+  };
+
   const handleSaveToVault = async () => {
     if (!currentInvestigationId || results.length === 0) return;
     setSaving(true);
@@ -232,7 +243,7 @@ export default function InvestigationHub() {
       </Box>
 
       <Grid container spacing={3} sx={{ alignItems: 'flex-start', overflow: 'hidden' }}>
-        <Grid item xs={12} md={4} sx={{ minWidth: 0, position: 'relative', zIndex: 10 }}>
+        <Grid item xs={12} md={4} sx={{ minWidth: 0, position: 'relative', zIndex: 10, pointerEvents: 'auto' }}>
           <Paper elevation={0} sx={{ p: 3, bgcolor: '#111827', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 2, minWidth: 280, overflow: 'hidden' }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', display: 'flex', alignItems: 'center', gap: 1 }}>
               <AgentIcon color="primary" fontSize="small" /> 1. Set Target Query
@@ -273,20 +284,22 @@ export default function InvestigationHub() {
               <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.4)', mb: 1, display: 'block' }}>Suggested Tools</Typography>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 {availableTools.map((tool: AvailableTool) => (
-                  <Chip 
+                  <Button
                     key={tool.id}
-                    label={tool.name}
-                    onClick={() => handleAddTool(tool)}
-                    icon={<AddIcon sx={{ fontSize: 16 }} />}
+                    variant="outlined"
                     size="small"
+                    startIcon={<AddIcon sx={{ fontSize: 16 }} />}
+                    onClick={() => handleAddTool(tool)}
                     sx={{ 
                       bgcolor: 'rgba(255,255,255,0.05)', 
                       color: '#fff', 
-                      transition: 'all 0.2s ease',
-                      '&:hover': { bgcolor: 'rgba(0, 212, 170, 0.25)', transform: 'scale(1.02)' },
-                      '& .MuiChip-label': { overflow: 'visible' } 
+                      borderColor: 'rgba(255,255,255,0.2)',
+                      textTransform: 'none',
+                      '&:hover': { bgcolor: 'rgba(0, 212, 170, 0.25)', borderColor: 'primary.main' },
                     }}
-                  />
+                  >
+                    {tool.name}
+                  </Button>
                 ))}
               </Box>
             </Box>
@@ -304,14 +317,16 @@ export default function InvestigationHub() {
                 <ListItem 
                   key={tool.id}
                   secondaryAction={
-                    <IconButton edge="end" size="small" onClick={() => handleRemoveTool(tool.id)} disabled={investigationStatus === 'running'}>
+                    <IconButton edge="end" size="small" onClick={() => handleRemoveTool(tool.id)} disabled={investigationStatus === 'running'} aria-label={`Remove ${tool.name}`}>
                       <DeleteIcon fontSize="small" sx={{ color: 'error.main' }} />
                     </IconButton>
                   }
                   sx={{ bgcolor: 'rgba(255,255,255,0.02)', borderRadius: 1, mb: 1 }}
                 >
-                  <ListItemIcon sx={{ minWidth: 30, color: 'primary.main', fontSize: '0.8rem', fontWeight: 700 }}>
-                    {index + 1}
+                  <ListItemIcon sx={{ minWidth: 36 }}>
+                    <Typography component="span" sx={{ color: 'primary.main', fontSize: '0.85rem', fontWeight: 700 }}>
+                      {index + 1}
+                    </Typography>
                   </ListItemIcon>
                   <ListItemText 
                     primary={tool.name} 
@@ -333,10 +348,22 @@ export default function InvestigationHub() {
               sx={{ 
                 py: 1.5, 
                 fontWeight: 700,
+                mb: 1,
                 '&.Mui-disabled': { bgcolor: 'rgba(0,212,170,0.2)', color: 'rgba(255,255,255,0.5)' }
               }}
             >
               Start Multi-Vector Search
+            </Button>
+            <Button
+              type="button"
+              fullWidth
+              variant="outlined"
+              size="small"
+              onClick={handleNewInvestigation}
+              disabled={investigationStatus === 'running'}
+              sx={{ color: 'rgba(255,255,255,0.6)', borderColor: 'rgba(255,255,255,0.2)' }}
+            >
+              New Investigation (Reload)
             </Button>
           </Paper>
         </Grid>
@@ -349,6 +376,9 @@ export default function InvestigationHub() {
                 <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>Investigation Pipeline</Typography>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Button size="small" variant="outlined" onClick={handleNewInvestigation} disabled={investigationStatus === 'running'} sx={{ color: 'rgba(255,255,255,0.7)', borderColor: 'rgba(255,255,255,0.3)' }}>
+                  Reload
+                </Button>
                 {investigationStatus !== 'idle' && currentInvestigationId && (
                   <Button size="small" variant="outlined" startIcon={<PdfIcon />} sx={{ color: 'primary.main', borderColor: 'rgba(0,212,170,0.4)' }} onClick={handleExportPDF}>
                     Download PDF Report
