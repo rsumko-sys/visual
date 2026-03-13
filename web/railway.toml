@@ -1,0 +1,18 @@
+# Railway config for OSINT Platform Web (Next.js)
+# Deploy from web/ directory or set Root Directory = web in Railway
+
+[build]
+builder = "NIXPACKS"
+
+watchPatterns = [
+  "**/*.ts",
+  "**/*.tsx",
+  "**/*.js",
+  "**/*.json",
+  "package.json",
+  "package-lock.json",
+]
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
