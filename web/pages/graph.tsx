@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { 
   Box, Typography, Paper, IconButton, Tooltip, TextField, Button, Chip, InputAdornment,
   List, ListItem, ListItemText, ListItemIcon, Divider,
@@ -21,12 +21,10 @@ import {
   AttachMoney as CryptoIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout';
-import ErrorBoundary from '../components/ErrorBoundary';
 import PolishedSlider from '../components/PolishedSlider';
 import { useDebounce } from '../hooks/useDebounce';
 import { useRouter } from 'next/router';
 
-// Graph Data for Demonstration
 const MOCK_GRAPH = {
   nodes: [
     { data: { id: 'Target', label: 'target_user_01', type: 'person', val: 20 } },
@@ -50,7 +48,7 @@ const MOCK_GRAPH = {
   ]
 };
 
-const nodeTypeColors: { [key: string]: string } = {
+const nodeTypeColors: Record<string, string> = {
   person: '#00d4aa',
   email: '#ff9800',
   phone: '#4caf50',
@@ -59,7 +57,7 @@ const nodeTypeColors: { [key: string]: string } = {
   crypto: '#ffeb3b'
 };
 
-const nodeTypeIcons: { [key: string]: any } = {
+const nodeTypeIcons: Record<string, React.ReactNode> = {
   person: <PersonIcon fontSize="small" />,
   email: <EmailIcon fontSize="small" />,
   phone: <PhoneIcon fontSize="small" />,
@@ -105,9 +103,22 @@ function saveGraphSettings(s: GraphSettings) {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(GRAPH_SETTINGS_KEY, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
+  } catch { /* ignore */ }
+}
+
+// Circle layout: Target at center, others around
+function getNodePositions(cx: number, cy: number, radius: number) {
+  const positions: Record<string, { x: number; y: number }> = {};
+  const others = MOCK_GRAPH.nodes.filter((n) => n.data.id !== 'Target');
+  positions['Target'] = { x: cx, y: cy };
+  others.forEach((n, i) => {
+    const angle = (2 * Math.PI * i) / others.length - Math.PI / 2;
+    positions[n.data.id] = {
+      x: cx + radius * Math.cos(angle),
+      y: cy + radius * Math.sin(angle),
+    };
+  });
+  return positions;
 }
 
 export default function VisualGraphPage() {
@@ -116,16 +127,10 @@ export default function VisualGraphPage() {
   const [graphSettings, setGraphSettings] = useState<GraphSettings>(DEFAULT_SETTINGS);
   const [snackbar, setSnackbar] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState('Target');
-  const [paramHighlight, setParamHighlight] = useState(false);
-  const [graphMounted, setGraphMounted] = useState(true);
-  const cyRef = useRef<any>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mountedRef = useRef(true);
-  const destroyingRef = useRef(false);
+  const svgRef = useRef<SVGSVGElement>(null);
 
   const { nodeScale, linkDistance, linkStrength, showLabels } = graphSettings;
   const linkDistanceDebounced = useDebounce(linkDistance, 150);
-  const linkStrengthDebounced = useDebounce(linkStrength, 150);
 
   useEffect(() => {
     setGraphSettings(loadGraphSettings());
@@ -136,182 +141,46 @@ export default function VisualGraphPage() {
   }, [graphSettings]);
 
   const selectedNode = useMemo(() =>
-    MOCK_GRAPH.nodes.find(n => n.data.id === selectedNodeId) || MOCK_GRAPH.nodes[0],
+    MOCK_GRAPH.nodes.find((n) => n.data.id === selectedNodeId) || MOCK_GRAPH.nodes[0],
     [selectedNodeId]
   );
 
-  const handleExportImage = () => {
-    const cy = cyRef.current;
-    if (cy && typeof cy.destroyed === 'function' && !cy.destroyed() && typeof cy.png === 'function') {
-      try {
-        const pngUri = cy.png({ bg: '#0a0c10', full: true });
+  const radius = 180 + (linkDistanceDebounced - 50) * 0.5;
+  const positions = useMemo(() => getNodePositions(350, 350, radius), [radius]);
+
+  const handleExportImage = useCallback(() => {
+    const svg = svgRef.current;
+    if (!svg) {
+      setSnackbar('Зачекайте завантаження графу');
+      return;
+    }
+    try {
+      const svgData = new XMLSerializer().serializeToString(svg);
+      const canvas = document.createElement('canvas');
+      canvas.width = 700;
+      canvas.height = 700;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('No context');
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = '#0a0c10';
+        ctx.fillRect(0, 0, 700, 700);
+        ctx.drawImage(img, 0, 0);
         const a = document.createElement('a');
-        a.href = pngUri;
+        a.href = canvas.toDataURL('image/png');
         a.download = 'osint-graph.png';
         a.click();
         setSnackbar('Граф експортовано як PNG');
-      } catch (e) {
-        console.error('Export failed:', e);
-        setSnackbar('Помилка експорту');
-      }
-    } else {
-      setSnackbar('Зачекайте завантаження графу');
+      };
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    } catch (e) {
+      console.error('Export failed:', e);
+      setSnackbar('Помилка експорту');
     }
-  };
+  }, []);
 
-  useEffect(() => {
-    mountedRef.current = true;
-    const handleRouteChange = (url: string) => {
-      if (!url.startsWith('/graph')) {
-        destroyingRef.current = true;
-        setGraphMounted(false);
-        const cy = cyRef.current;
-        const suppress = (msg: string) => (msg?.includes?.('notify') || msg?.includes?.('null')) ? true : false;
-        const origOnError = window.onerror;
-        const origOnUnhandled = window.onunhandledrejection;
-        window.onerror = function (msg, ..._args) {
-          if (suppress(String(msg ?? ''))) return true;
-          return origOnError ? (origOnError as any).apply(this, arguments) : false;
-        };
-        window.onunhandledrejection = function (e: PromiseRejectionEvent) {
-          const msg = String(e?.reason?.message ?? e?.reason ?? '');
-          if (suppress(msg)) { e.preventDefault(); return; }
-          origOnUnhandled?.(e);
-        };
-        if (cy && typeof cy.destroyed === 'function' && !cy.destroyed()) {
-          try { cy.destroy(); } catch (_) { /* ignore */ }
-        }
-        cyRef.current = null;
-        setTimeout(() => {
-          window.onerror = origOnError;
-          window.onunhandledrejection = origOnUnhandled;
-        }, 500);
-      }
-    };
-    router.events.on('routeChangeStart', handleRouteChange);
-    return () => {
-      mountedRef.current = false;
-      router.events.off('routeChangeStart', handleRouteChange);
-    };
-  }, [router.events]);
-
-  // Raw Cytoscape (no react-cytoscapejs) - full control over lifecycle, avoids notify null error
-  useEffect(() => {
-    if (!graphMounted || !containerRef.current) return;
-    let cancelled = false;
-    import('cytoscape').then(({ default: cytoscape }) => {
-      if (cancelled || !containerRef.current || !mountedRef.current) return;
-      const container = containerRef.current;
-      const cy = cytoscape({
-        container,
-        elements: [...MOCK_GRAPH.nodes, ...MOCK_GRAPH.edges],
-        style: [
-          {
-            selector: 'node',
-            style: {
-              'background-color': (ele: any) => nodeTypeColors[ele.data('type')] || '#666',
-              'label': 'data(label)',
-              'width': (ele: any) => Math.round((30 + ((ele.data('val') ?? 15) - 10) * 3) * nodeScale),
-              'height': (ele: any) => Math.round((30 + ((ele.data('val') ?? 15) - 10) * 3) * nodeScale),
-              'color': '#fff',
-              'font-size': 12,
-              'text-outline-width': 2,
-              'text-outline-color': '#222',
-              'z-index': 10,
-            },
-          },
-          { selector: 'edge', style: { 'width': 2, 'line-color': 'rgba(255,255,255,0.15)', 'target-arrow-color': 'rgba(255,255,255,0.25)', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } },
-          { selector: 'node:selected', style: { 'border-width': 4, 'border-color': '#fff', 'z-index': 999 } },
-        ],
-        layout: {
-          name: 'cose',
-          idealEdgeLength: linkDistanceDebounced,
-          nodeRepulsion: 2000 + 4000 * (1 - linkStrengthDebounced),
-          animate: false,
-        },
-        minZoom: 0.3,
-        maxZoom: 2.5,
-        boxSelectionEnabled: false,
-      });
-      cy.on('tap', 'node', (e: any) => {
-        const node = e.target;
-        if (node?.isNode?.()) setSelectedNodeId(node.id());
-      });
-      cyRef.current = cy;
-    });
-    return () => {
-      cancelled = true;
-      destroyingRef.current = true;
-      const cy = cyRef.current;
-      const origOnError = window.onerror;
-      const origOnUnhandled = window.onunhandledrejection;
-      window.onerror = function (msg: string | Event, ..._args: any[]) {
-        const s = typeof msg === 'string' ? msg : (msg as ErrorEvent)?.message ?? '';
-        if (s.includes('notify') || s.includes('null')) return true;
-        return origOnError ? (origOnError as any).apply(this, arguments) : false;
-      };
-      window.onunhandledrejection = function (e: PromiseRejectionEvent) {
-        const msg = String(e?.reason?.message ?? e?.reason ?? '');
-        if (msg.includes('notify') || msg.includes('null')) { e.preventDefault(); return; }
-        origOnUnhandled?.(e);
-      };
-      if (cy && typeof cy.destroyed === 'function' && !cy.destroyed()) {
-        try { cy.destroy(); } catch (_) { /* ignore */ }
-      }
-      cyRef.current = null;
-      setTimeout(() => {
-        window.onerror = origOnError;
-        window.onunhandledrejection = origOnUnhandled;
-      }, 500);
-    };
-  }, [graphMounted]);
-
-  useEffect(() => {
-    if (!mountedRef.current || destroyingRef.current || !cyRef.current) return;
-    const cy = cyRef.current;
-    if (typeof cy.destroyed === 'function' && !cy.destroyed()) {
-      try {
-      const nodeStyle: any = {
-        'background-color': (ele: any) => nodeTypeColors[ele.data('type')] || '#666',
-        'label': showLabels ? 'data(label)' : '',
-        'width': (ele: any) => Math.round((30 + ((ele.data('val') ?? 15) - 10) * 3) * nodeScale),
-        'height': (ele: any) => Math.round((30 + ((ele.data('val') ?? 15) - 10) * 3) * nodeScale),
-        'color': '#fff', 'font-size': 12, 'text-outline-width': 2, 'text-outline-color': '#222', 'z-index': 10,
-      };
-      cy.style().fromJson([
-        { selector: 'node', style: nodeStyle },
-        { selector: 'edge', style: { 'width': 2, 'line-color': 'rgba(255,255,255,0.15)', 'target-arrow-color': 'rgba(255,255,255,0.25)', 'target-arrow-shape': 'triangle', 'curve-style': 'bezier' } },
-        { selector: 'node:selected', style: { 'border-width': 4, 'border-color': '#fff', 'z-index': 999 } },
-      ]).update();
-      cy.zoom(nodeScale);
-      setParamHighlight(true);
-      const t = setTimeout(() => setParamHighlight(false), 1000);
-      return () => clearTimeout(t);
-      } catch (_) { /* ignore cy errors during unmount */ }
-    }
-  }, [nodeScale, showLabels]);
-
-  useEffect(() => {
-    if (!mountedRef.current || destroyingRef.current || !cyRef.current) return;
-    const cy = cyRef.current;
-    if (typeof cy.destroyed === 'function' && !cy.destroyed()) {
-      try {
-      const layout = cy.layout({
-        name: 'cose',
-        idealEdgeLength: linkDistanceDebounced,
-        nodeRepulsion: 2000 + 4000 * (1 - linkStrengthDebounced),
-        animate: false,
-      });
-      layout.run();
-      setParamHighlight(true);
-      const t = setTimeout(() => setParamHighlight(false), 1000);
-      return () => {
-        clearTimeout(t);
-        if (layout?.stop) layout.stop();
-      };
-      } catch (_) { /* ignore */ }
-    }
-  }, [linkDistanceDebounced, linkStrengthDebounced]);
+  const baseSize = 24;
+  const nodeR = (val: number) => Math.round((baseSize + (val - 10) * 1.5) * nodeScale);
 
   return (
     <Layout>
@@ -332,86 +201,39 @@ export default function VisualGraphPage() {
       </Box>
 
       <Box data-print-graph-page sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'stretch' }}>
-        {/* Left Toolbar - fixed width, never overlaps graph */}
         <Box sx={{ flex: { md: '0 0 300px' }, maxWidth: { md: 300 }, minWidth: { xs: 0, md: 260 }, order: 1 }}>
           <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, mb: 3 }}>
-            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', wordBreak: 'break-word' }}>Graph Search</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Graph Search</Typography>
             <TextField
               fullWidth
               size="small"
               placeholder="Пошук вузла (скоро)"
               value={searchQuery}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} />
-                  </InputAdornment>
-                ),
-              }}
-              sx={{ 
-                mb: 3,
-                bgcolor: 'rgba(0,0,0,0.2)',
-                '& .MuiInputBase-root': { color: '#fff' },
-                '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' }
-              }}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              InputProps={{ startAdornment: <InputAdornment position="start"><SearchIcon sx={{ color: 'rgba(255,255,255,0.3)', fontSize: 20 }} /></InputAdornment> }}
+              sx={{ mb: 3, bgcolor: 'rgba(0,0,0,0.2)', '& .MuiInputBase-root': { color: '#fff' }, '& .MuiOutlinedInput-root fieldset': { borderColor: 'rgba(255,255,255,0.1)' } }}
             />
-
             <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.05)' }} />
-
-            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', wordBreak: 'break-word' }}>Visualization Settings</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Visualization Settings</Typography>
             <FormControlLabel
-              control={<Switch checked={showLabels} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setGraphSettings((s) => ({ ...s, showLabels: e.target.checked }))} size="small" />}
+              control={<Switch checked={showLabels} onChange={(e) => setGraphSettings((s) => ({ ...s, showLabels: e.target.checked }))} size="small" />}
               label={<Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.7)' }}>Show Labels</Typography>}
               sx={{ mb: 1, display: 'block' }}
             />
-            <PolishedSlider
-              label="Node Scale"
-              value={nodeScale}
-              onChange={(v) => setGraphSettings((s) => ({ ...s, nodeScale: v }))}
-              min={0.5}
-              max={3}
-              step={0.01}
-              unit="×"
-              snapPoints={[0.5, 1, 1.5, 2, 2.5, 3]}
-            />
-            <PolishedSlider
-              label="Link Distance"
-              value={linkDistance}
-              onChange={(v) => setGraphSettings((s) => ({ ...s, linkDistance: v }))}
-              min={50}
-              max={200}
-              step={5}
-              snapPoints={[50, 100, 150, 200]}
-            />
-            <PolishedSlider
-              label="Link Strength"
-              value={linkStrength}
-              onChange={(v) => setGraphSettings((s) => ({ ...s, linkStrength: v }))}
-              min={0}
-              max={1}
-              step={0.05}
-              snapPoints={[0, 0.5, 1]}
-            />
-
+            <PolishedSlider label="Node Scale" value={nodeScale} onChange={(v) => setGraphSettings((s) => ({ ...s, nodeScale: v }))} min={0.5} max={3} step={0.01} unit="×" snapPoints={[0.5, 1, 1.5, 2, 2.5, 3]} />
+            <PolishedSlider label="Link Distance" value={linkDistance} onChange={(v) => setGraphSettings((s) => ({ ...s, linkDistance: v }))} min={50} max={200} step={5} snapPoints={[50, 100, 150, 200]} />
+            <PolishedSlider label="Link Strength" value={linkStrength} onChange={(v) => setGraphSettings((s) => ({ ...s, linkStrength: v }))} min={0} max={1} step={0.05} snapPoints={[0, 0.5, 1]} />
             <Divider sx={{ my: 2, borderColor: 'rgba(255,255,255,0.05)' }} />
-
-            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff', wordBreak: 'break-word' }}>Legend</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Legend</Typography>
             <List dense>
               {Object.entries(nodeTypeColors).map(([type, color]) => (
                 <ListItem key={type} sx={{ px: 0 }}>
-                  <ListItemIcon sx={{ minWidth: 30 }}>
-                    <Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: color }} />
-                  </ListItemIcon>
-                  <ListItemText 
-                    primary={type.charAt(0).toUpperCase() + type.slice(1)} 
-                    primaryTypographyProps={{ variant: 'caption', color: 'rgba(255,255,255,0.7)', noWrap: false, sx: { wordBreak: 'break-word', minWidth: 0 } }} 
-                  />
+                  <ListItemIcon sx={{ minWidth: 30 }}><Box sx={{ width: 12, height: 12, borderRadius: '50%', bgcolor: color }} /></ListItemIcon>
+                  <ListItemText primary={type.charAt(0).toUpperCase() + type.slice(1)} primaryTypographyProps={{ variant: 'caption', color: 'rgba(255,255,255,0.7)' }} />
                 </ListItem>
               ))}
             </List>
           </Paper>
-
           <Paper sx={{ p: 3, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2 }}>
             <Typography variant="subtitle2" sx={{ mb: 2, color: '#fff' }}>Selected Entity</Typography>
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', py: 2 }}>
@@ -431,85 +253,44 @@ export default function VisualGraphPage() {
           </Paper>
         </Box>
 
-        {/* Main Graph Canvas - takes remaining space */}
         <Box sx={{ flex: 1, minWidth: 0, order: 2 }}>
-          <Paper data-graph-canvas sx={{ 
-            height: '700px', 
-            bgcolor: '#0a0c10', 
-            border: '1px solid rgba(255,255,255,0.05)', 
-            borderRadius: 2,
-            position: 'relative',
-            overflow: 'hidden',
-            backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)',
-            backgroundSize: '30px 30px'
-          }}>
-            {/* Graph Controls Floating Bar - compact */}
-            <Box sx={{ 
-              position: 'absolute', 
-              top: 12, 
-              right: 12, 
-              display: 'flex', 
-              flexDirection: 'column', 
-              gap: 0.5, 
-              zIndex: 10,
-              bgcolor: 'rgba(0,0,0,0.6)',
-              backdropFilter: 'blur(6px)',
-              p: 0.25,
-              borderRadius: 1.5,
-              border: '1px solid rgba(255,255,255,0.08)'
-            }}>
-              <Tooltip title="Zoom In" placement="left">
-                <IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.min(3, s.nodeScale + 0.2) }))}><ZoomInIcon /></IconButton>
-              </Tooltip>
-              <Tooltip title="Zoom Out" placement="left">
-                <IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.max(0.5, s.nodeScale - 0.2) }))}><ZoomOutIcon /></IconButton>
-              </Tooltip>
-              <Tooltip title="Reset View" placement="left">
-                <IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: 1 }))}><ResetIcon /></IconButton>
-              </Tooltip>
+          <Paper data-graph-canvas sx={{ height: '700px', bgcolor: '#0a0c10', border: '1px solid rgba(255,255,255,0.05)', borderRadius: 2, position: 'relative', overflow: 'hidden', backgroundImage: 'radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px)', backgroundSize: '30px 30px' }}>
+            <Box sx={{ position: 'absolute', top: 12, right: 12, display: 'flex', flexDirection: 'column', gap: 0.5, zIndex: 10, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(6px)', p: 0.25, borderRadius: 1.5, border: '1px solid rgba(255,255,255,0.08)' }}>
+              <Tooltip title="Zoom In" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.min(3, s.nodeScale + 0.2) }))}><ZoomInIcon /></IconButton></Tooltip>
+              <Tooltip title="Zoom Out" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: Math.max(0.5, s.nodeScale - 0.2) }))}><ZoomOutIcon /></IconButton></Tooltip>
+              <Tooltip title="Reset View" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => setGraphSettings((s) => ({ ...s, nodeScale: 1 }))}><ResetIcon /></IconButton></Tooltip>
               <Divider sx={{ borderColor: 'rgba(255,255,255,0.1)' }} />
-              <Tooltip title="Settings" placement="left">
-                <IconButton size="small" sx={{ color: '#fff' }} onClick={() => router.push('/settings')}><SettingsIcon /></IconButton>
-              </Tooltip>
+              <Tooltip title="Settings" placement="left"><IconButton size="small" sx={{ color: '#fff' }} onClick={() => router.push('/settings')}><SettingsIcon /></IconButton></Tooltip>
             </Box>
 
-            {/* Raw Cytoscape - no react-cytoscapejs, full lifecycle control */}
-            <Box sx={{ width: '100%', height: '100%' }}>
-              {graphMounted ? (
-              <ErrorBoundary fallback={
-                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, py: 6 }}>
-                  <GraphIcon sx={{ fontSize: 64, color: 'rgba(255,255,255,0.12)', mb: 2 }} />
-                  <Typography sx={{ color: 'rgba(255,255,255,0.6)', mb: 2, textAlign: 'center' }}>
-                    Тут з&apos;являться ваші зв&apos;язки між сутностями
-                  </Typography>
-                  <Typography variant="body2" sx={{ color: 'rgba(255,255,255,0.4)', textAlign: 'center', maxWidth: 320 }}>
-                    Граф тимчасово недоступний. Оновіть сторінку або спробуйте пізніше.
-                  </Typography>
-                </Box>
-              }>
-              <div ref={containerRef} style={{ width: '100%', height: '700px', background: 'transparent' }} />
-              </ErrorBoundary>
-              ) : (
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 400, color: 'rgba(255,255,255,0.4)' }}>
-                  <Typography variant="body2">Navigating...</Typography>
-                </Box>
-              )}
+            <Box sx={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg ref={svgRef} viewBox="0 0 700 700" width="100%" height="700" style={{ background: 'transparent' }}>
+                <defs>
+                  <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="rgba(255,255,255,0.25)" /></marker>
+                </defs>
+                {MOCK_GRAPH.edges.map((e, i) => {
+                  const src = positions[e.data.source];
+                  const tgt = positions[e.data.target];
+                  if (!src || !tgt) return null;
+                  return <line key={i} x1={src.x} y1={src.y} x2={tgt.x} y2={tgt.y} stroke="rgba(255,255,255,0.15)" strokeWidth={2} markerEnd="url(#arrow)" />;
+                })}
+                {MOCK_GRAPH.nodes.map((n) => {
+                  const pos = positions[n.data.id];
+                  if (!pos) return null;
+                  const r = nodeR(n.data.val ?? 15);
+                  const isSelected = selectedNodeId === n.data.id;
+                  const color = nodeTypeColors[n.data.type] || '#666';
+                  return (
+                    <g key={n.data.id} onClick={() => setSelectedNodeId(n.data.id)} style={{ cursor: 'pointer' }}>
+                      <circle cx={pos.x} cy={pos.y} r={r} fill={color} stroke={isSelected ? '#fff' : 'transparent'} strokeWidth={isSelected ? 4 : 0} />
+                      {showLabels && <text x={pos.x} y={pos.y + r + 14} textAnchor="middle" fill="#fff" fontSize={12} style={{ textShadow: '0 1px 2px #222' }}>{n.data.label}</text>}
+                    </g>
+                  );
+                })}
+              </svg>
             </Box>
 
-            {/* Bottom Status Bar */}
-            <Box sx={{ 
-              position: 'absolute', 
-              bottom: 0, 
-              left: 0, 
-              right: 0, 
-              p: 1.5, 
-              bgcolor: 'rgba(0,0,0,0.6)', 
-              backdropFilter: 'blur(8px)',
-              borderTop: '1px solid rgba(255,255,255,0.05)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+            <Box sx={{ position: 'absolute', bottom: 0, left: 0, right: 0, p: 1.5, bgcolor: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <Box sx={{ display: 'flex', gap: 2 }}>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Nodes: {MOCK_GRAPH.nodes.length}</Typography>
                 <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.5)' }}>Edges: {MOCK_GRAPH.edges.length}</Typography>

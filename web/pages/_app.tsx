@@ -1,21 +1,7 @@
 import type { AppProps } from 'next/app';
 import Head from 'next/head';
-import { useEffect } from 'react';
 import '../styles/print.css';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-
-// Suppress Cytoscape "notify" null error during graph unmount (known Cytoscape lifecycle bug)
-function useCytoscapeErrorSuppress() {
-  useEffect(() => {
-    const orig = window.onerror;
-    window.onerror = function (msg, ...args) {
-      const s = String(msg ?? '');
-      if (s.includes("reading 'notify'") && s.includes('null')) return true;
-      return orig ? (orig as any).apply(this, [msg, ...args]) : false;
-    };
-    return () => { window.onerror = orig; };
-  }, []);
-}
 import Layout from '../components/Layout';
 import ApiErrorHandler from '../components/ApiErrorHandler';
 import { AuthProvider } from '../context/auth';
@@ -80,7 +66,6 @@ const theme = createTheme({
 });
 
 export default function App({ Component, pageProps }: AppProps) {
-  useCytoscapeErrorSuppress();
   return (
     <>
       <Head>
