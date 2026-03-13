@@ -36,6 +36,13 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem(TOKEN_KEY);
+      const path = window.location.pathname;
+      if (path !== '/login' && !path.startsWith('/login')) {
+        window.location.href = `/login?redirect=${encodeURIComponent(path)}`;
+      }
+    }
     const data = error.response?.data as { detail?: string | object } | undefined;
     const detail = data?.detail;
     const message = detail

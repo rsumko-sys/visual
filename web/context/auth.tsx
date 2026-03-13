@@ -7,17 +7,20 @@ interface AuthContextType {
   login: (t: string) => void;
   logout: () => void;
   isAuthenticated: boolean;
+  isReady: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setToken(localStorage.getItem(TOKEN_KEY));
     }
+    setIsReady(true);
   }, []);
 
   const login = useCallback((t: string) => {
@@ -31,7 +34,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token }}>
+    <AuthContext.Provider value={{ token, login, logout, isAuthenticated: !!token, isReady }}>
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Header
+from fastapi import APIRouter, Depends, Form
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database import get_db
-from app.models import Evidence, Investigation
-from app.core.auth_helpers import get_investigation_with_auth
+from app.models import Evidence, Investigation, User
+from app.core.auth_helpers import get_investigation_for_user
+from app.routers.auth import get_current_user
 import hashlib
 import json
 import uuid
@@ -18,15 +19,15 @@ def calculate_hash(data: str) -> str:
 
 @router.post("/store")
 async def store_evidence(
+    current_user: User = Depends(get_current_user),
     investigation_id: str = Form(...),
     source: str = Form(...),
     data: str = Form(...),
     metadata: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(None)
 ):
     """Зберегти доказ у сховище з автоматичним хешуванням"""
-    get_investigation_with_auth(investigation_id, db, authorization)
+    get_investigation_for_user(investigation_id, db, current_user)
 
     evidence_hash = calculate_hash(data)
     
@@ -53,11 +54,11 @@ async def store_evidence(
 @router.get("/{investigation_id}/export/stix")
 async def export_to_stix(
     investigation_id: str,
+    current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
-    authorization: Optional[str] = Header(None)
 ):
     """Експорт зібраних доказів в універсальному форматі STIX 2.1 (Золотий стандарт OSINT)"""
-    investigation = get_investigation_with_auth(investigation_id, db, authorization)
+    investigation = get_investigation_for_user(investigation_id, db, current_user)
     
     evidence_list = db.query(Evidence).filter(Evidence.investigation_id == investigation_id).all()
     

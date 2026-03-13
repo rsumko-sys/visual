@@ -1,18 +1,21 @@
-from fastapi import APIRouter, HTTPException, status, Depends
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi.security import OAuth2PasswordRequestForm, HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from datetime import datetime, timedelta, timezone
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 import logging
+from typing import Annotated
 
 from app.database import get_db
 from app.models import User
 from app.schemas import UserCreate, UserResponse, Token
 from app.config import settings
+from app.core.limiter import limiter
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+security = HTTPBearer()
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -51,7 +54,9 @@ async def register(
     return new_user
 
 @router.post("/token", response_model=Token, responses={401: {"description": "Invalid credentials"}})
+@limiter.limit("5/minute")
 async def login(
+    request: Request,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends(OAuth2PasswordRequestForm)],
     db: Annotated[Session, Depends(get_db)]
 ):
@@ -62,7 +67,11 @@ async def login(
     access_token = create_access_token(data={"sub": user.id})
     return {"access_token": access_token, "token_type": "bearer"}
 
-def get_current_user(token: str, db: Annotated[Session, Depends(get_db)]) -> User:
+def get_current_user(
+    credentials: Annotated[HTTPAuthorizationCredentials, Depends(security)],
+    db: Annotated[Session, Depends(get_db)]
+) -> User:
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")

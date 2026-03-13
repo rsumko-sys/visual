@@ -1,6 +1,7 @@
 import os
-import secrets
+import sys
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 
 class Settings(BaseSettings):
     # Database (set in .env)
@@ -9,10 +10,17 @@ class Settings(BaseSettings):
     # Redis (set in .env)
     REDIS_URL: str = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
-    # JWT — set SECRET_KEY or JWT_SECRET_KEY in .env for production (required for stable tokens)
-    SECRET_KEY: str = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
+    # JWT — SECRET_KEY or JWT_SECRET_KEY MUST be set in .env (server will not start without it)
+    SECRET_KEY: str = os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY") or ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+
+    @model_validator(mode="after")
+    def require_secret_key(self):
+        if not self.SECRET_KEY or not self.SECRET_KEY.strip():
+            print("FATAL: SECRET_KEY must be set in .env (or JWT_SECRET_KEY). Server will not start.", file=sys.stderr)
+            sys.exit(1)
+        return self
 
     # API Keys (external services, set in .env)
     SHODAN_KEY: str = os.getenv("SHODAN_KEY") or os.getenv("SHODAN_API_KEY") or ""

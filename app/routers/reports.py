@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
-from typing import Annotated, Optional
+from fastapi import APIRouter, Depends, Query
+from typing import Annotated
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import Investigation, Evidence, User
-from app.core.auth_helpers import get_investigation_with_auth
+from app.models import Evidence, User
+from app.core.auth_helpers import get_investigation_for_user
+from app.routers.auth import get_current_user
 from app.reporting import (
     ReportGenerator, ReportFormat
 )
@@ -18,11 +19,11 @@ router = APIRouter()
 @router.get("/{investigation_id}/summary")
 async def get_investigation_summary(
     investigation_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Отримати резюме розслідування"""
-    investigation = get_investigation_with_auth(investigation_id, db, authorization)
+    investigation = get_investigation_for_user(investigation_id, db, current_user)
     
     evidence = db.query(Evidence).filter(
         Evidence.investigation_id == investigation_id
@@ -48,32 +49,20 @@ import hashlib
 @router.post("/{investigation_id}/evidence")
 async def add_evidence(
     investigation_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
     evidence: Annotated[dict, Body(...)],
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Додати доказ до Evidence Vault з хешуванням для ланцюжка довіри"""
+    from app.models import Investigation
     inv = db.query(Investigation).filter(Investigation.id == investigation_id).first()
     if inv:
-        get_investigation_with_auth(investigation_id, db, authorization)
+        get_investigation_for_user(investigation_id, db, current_user)
     if not inv:
-        # Ensure system user exists for owner_id FK
-        from passlib.context import CryptContext
-        pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        system_user = db.query(User).filter(User.username == "system").first()
-        if not system_user:
-            system_user = User(
-                id="system",
-                username="system",
-                email="system@osint.local",
-                hashed_password=pwd.hash("system_no_login")
-            )
-            db.add(system_user)
-            db.commit()
         target = evidence.get("target") or evidence.get("query") or evidence.get("source", "unknown")
         inv = Investigation(
             id=investigation_id,
-            owner_id=system_user.id,
+            owner_id=current_user.id,
             title=f"Investigation: {str(target)[:40]}..." if len(str(target)) > 40 else f"Investigation: {target}",
             description="Auto-created from Evidence Vault",
             target_identifier=target,
@@ -98,11 +87,11 @@ async def add_evidence(
 @router.get("/{investigation_id}/evidence")
 async def get_evidence(
     investigation_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
-    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Отримати всі докази для розслідування з перевіркою цілісності"""
-    get_investigation_with_auth(investigation_id, db, authorization)
+    get_investigation_for_user(investigation_id, db, current_user)
     evidence_list = db.query(Evidence).filter(Evidence.investigation_id == investigation_id).all()
     result = []
     for ev in evidence_list:
@@ -142,13 +131,13 @@ def _extract_tool_result(evidence: Evidence) -> dict:
 @router.post("/{investigation_id}/generate-report")
 async def generate_investigation_report(
     investigation_id: str,
+    current_user: Annotated[User, Depends(get_current_user)],
     db: Annotated[Session, Depends(get_db)],
     format: Annotated[str, Query()] = "json",
     include_analysis: Annotated[bool, Query()] = True,
-    authorization: Annotated[Optional[str], Header()] = None
 ):
     """Згенерувати ЗАГАЛЬНИЙ ЗВІТ розслідування"""
-    investigation = get_investigation_with_auth(investigation_id, db, authorization)
+    investigation = get_investigation_for_user(investigation_id, db, current_user)
     evidence_list = db.query(Evidence).filter(
         Evidence.investigation_id == investigation_id
     ).all()

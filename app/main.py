@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import os
 import logging
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
+from app.core.limiter import limiter
 from app.routers import auth, investigations, tools, health, reports, integration, vault
 from app.database import engine, Base, get_db
 from app.core.rate_limit import RateLimitMiddleware, SecurityMiddleware
@@ -18,10 +18,6 @@ Base.metadata.create_all(bind=engine)
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Warn if SECRET_KEY not set (tokens invalidate on restart)
-if not (os.getenv("SECRET_KEY") or os.getenv("JWT_SECRET_KEY")):
-    logger.warning("SECRET_KEY not in .env — set it for production (tokens invalidate on restart)")
-
 app = FastAPI(
     title="OSINT Platform 2026",
     description="Hybrid OSINT platform with 150 integrated tools",
@@ -29,7 +25,6 @@ app = FastAPI(
 )
 
 # Rate limiting (slowapi)
-limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.add_middleware(SlowAPIMiddleware)
