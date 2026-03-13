@@ -1,5 +1,17 @@
 # Railway Pro — повне налаштування OSINT Platform
 
+## Чекліст (відмічай по ходу)
+
+- [ ] 1. Згенерувати домен для API (robust-kindness)
+- [ ] 2. Додати Postgres (Database → PostgreSQL)
+- [ ] 3. Додати Redis (Database → Redis)
+- [ ] 4. Додати змінні в API (SECRET_KEY, DATABASE_URL, REDIS_URL, CELERY_*)
+- [ ] 5. Додати NEXT_PUBLIC_API_URL в dossier
+- [ ] 6. Redeploy dossier
+- [ ] 7. Зареєструвати користувача (UI або `scripts/register_admin.sh`)
+
+---
+
 ## 1. API сервіс (robust-kindness)
 
 ### 1.1 Домен
@@ -15,7 +27,9 @@
 | `DATABASE_URL` | З Railway Postgres (див. нижче) | Так |
 | `REDIS_URL` | З Railway Redis (див. нижче) | Так |
 | `CELERY_BROKER_URL` | = REDIS_URL | Так |
-| `CELERY_RESULT_BACKEND` | = REDIS_URL (інший DB) | Так |
+| `CELERY_RESULT_BACKEND` | REDIS_URL з `/1` замість `/0` (напр. `redis://.../1`) | Так |
+
+**SECRET_KEY:** виконай `openssl rand -base64 32` у терміналі.
 
 ### 1.3 Postgres (Railway Pro)
 - **+ New** → **Database** → **PostgreSQL**
